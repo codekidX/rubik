@@ -7,7 +7,7 @@ Ink aims to ease and speedup client-side development with Go. The server side de
 ### Features
 
 - Easy to use APIs (wrapper around net/http with zero third-party modules)
-- Magic params substitution
+- (Magic) path substitution
 - Inline query and body builder
 - Response Type-Inference
 - Client wise abstraction
@@ -31,13 +31,13 @@ import "github.com/codekidX/ink"
 
 ### Getting Started
 
-The first thing we need do is create a base Ink client that will be common accross calls.
+The first thing we need do is create a base **Ink** client that will be common across calls.
 
 ```go
-incl := ink.New("http://localhost:8080", time.Second * 30)
+inkcl := ink.New("http://localhost:8080", time.Second * 30)
 ```
 
-Making a `GET` API is a one-liner with **ink**
+Making a `GET` request is a one-liner with **Ink**
 
 ```go
 resp, err := inkcl.Get("/pancakes").Call()
@@ -46,3 +46,19 @@ if err == nil {
     // Dp something with resp ...
 }
 ```
+
+#### Path Substitution
+
+I call it magic because it really is, I had an hard time appending strings just to construct paths that has dynamic params in it, this feature makes it easy and is also a one-liner/
+
+```go
+var type = "1"
+var addon = "honey"
+resp, err := inkcl.Get("/pancake/$/addon/$", type, addon).Call()
+
+if err == nil {
+    // Dp something with resp ...
+}
+```
+
+Notice the dollar signs and an extra params, which just looks as it is. `$`s are substituted with each params in the order in which they are supplied to function.
