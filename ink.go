@@ -2,11 +2,13 @@ package ink
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -17,8 +19,9 @@ type Client struct {
 	httpClient  http.Client
 	url         string
 	async       chan Response
-	jwtSecret   string
-	basicSecret string
+	JWTSecret   string
+	BasicSecret string
+	BearerName  string
 }
 
 // Response is a struct that is returned by every client after
@@ -27,7 +30,6 @@ type Response struct {
 	Status     int
 	Body       interface{}
 	Raw        *http.Response
-	ParsedBody interface{}
 	StringBody string
 }
 
@@ -46,16 +48,22 @@ type Request struct {
 	path         string
 	requestType  string
 	json         bool
-	headers      map[string]interface{}
+	urlencoded   bool
+	headers      url.Values
 	params       []string
-	body         map[string]interface{}
-	query        map[string]interface{}
-	responseType reflect.Type
+	body         url.Values
+	query        url.Values
+	responseType interface{}
+	cancel       context.CancelFunc
+	context      context.Context
 }
 
 // RequestProcessor is a post processing struct that helps you infer types
 type RequestProcessor struct {
 	requset        *Request
+	Headers        url.Values
+	Body           url.Values
+	Query          url.Values
 	processorError error
 }
 
@@ -66,6 +74,7 @@ func New(baseURL string, timeout time.Duration) *Client {
 		httpClient: http.Client{
 			Timeout: timeout,
 		},
+		BearerName: "Bearer",
 	}
 }
 
@@ -79,30 +88,14 @@ func (c *Client) Get(path string, params ...string) *RequestProcessor {
 	req.params = params
 	return &RequestProcessor{
 		requset: &req,
+		Body:    url.Values{},
+		Query:   url.Values{},
 	}
-}
-
-// Headers ..
-func (rp *RequestProcessor) Headers(data map[string]interface{}) *RequestProcessor {
-	rp.requset.headers = data
-	return rp
-}
-
-// Query ..
-func (rp *RequestProcessor) Query(data map[string]interface{}) *RequestProcessor {
-	rp.requset.query = data
-	return rp
 }
 
 // QueryOfType ..
 func (rp *RequestProcessor) QueryOfType(data interface{}) *RequestProcessor {
 	rp.requset.query = extractFromType(data)
-	return rp
-}
-
-// Body ..
-func (rp *RequestProcessor) Body(data map[string]interface{}) *RequestProcessor {
-	rp.requset.body = data
 	return rp
 }
 
@@ -118,14 +111,31 @@ func (rp *RequestProcessor) IsJSON(status bool) *RequestProcessor {
 	return rp
 }
 
-// Infer ..
-func (rp *RequestProcessor) Infer(t reflect.Type) *RequestProcessor {
-	rp.requset.responseType = t
+// IsURLEncoded ..
+func (rp *RequestProcessor) IsURLEncoded(status bool) *RequestProcessor {
+	rp.requset.urlencoded = status
 	return rp
+}
+
+// Infer ..
+func (rp *RequestProcessor) Infer(target interface{}) *RequestProcessor {
+	rp.requset.responseType = target
+	return rp
+}
+
+// Cancel ...
+func (rp *RequestProcessor) Cancel() {
+	rp.requset.cancel()
 }
 
 // Call ..
 func (rp *RequestProcessor) Call() (Response, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	rp.requset.cancel = cancel
+	rp.requset.context = ctx
+	rp.requset.body = rp.Body
+	rp.requset.query = rp.Query
+
 	switch rp.requset.requestType {
 	case GET:
 		return doGetCall(rp.requset)
@@ -147,7 +157,10 @@ func doGetCall(req *Request) (Response, error) {
 	}
 
 	var fullURL = req.base + pathWithParams
-	fmt.Println(fullURL)
+
+	if len(req.query) > 0 {
+		fullURL += "?" + req.query.Encode()
+	}
 
 	var requestBody []byte
 	var httpRequest *http.Request
@@ -156,15 +169,20 @@ func doGetCall(req *Request) (Response, error) {
 		requestBody, err = json.Marshal(req.body)
 		httpRequest, err = http.NewRequest(req.requestType, fullURL, bytes.NewBuffer(requestBody))
 		httpRequest.Header.Set("Content-Type", "application/json")
+	} else if req.urlencoded && req.body != nil {
+		requestBody = []byte(req.body.Encode())
+		httpRequest, err = http.NewRequest(req.requestType, fullURL, bytes.NewBuffer(requestBody))
 	} else {
 		httpRequest, err = http.NewRequest(req.requestType, fullURL, nil)
 	}
+
+	httpRequest = httpRequest.WithContext(req.context)
 
 	if err != nil {
 		return Response{}, err
 	}
 
-	httpRequest.Header.Set(HTTP_USER_AGENT, InkClientAgent)
+	httpRequest.Header.Set(HeaderUserAgent, InkClientAgent)
 
 	resp, err := req.client.Do(httpRequest)
 
@@ -176,27 +194,21 @@ func doGetCall(req *Request) (Response, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 
+	responseType := reflect.TypeOf(req.responseType)
 	// this means that you want ink to infer something
-	if req.responseType != nil {
-		var responseObject interface{}
-		err = json.Unmarshal(body, &responseObject)
+	if responseType != nil {
+		err = json.Unmarshal(body, req.responseType)
 
 		if err != nil {
-			return Response{}, err
+			message := fmt.Sprintf("InkInferenceError: Cannot infer a non-json value to specified type: %s", responseType.Name())
+			return Response{
+				Status: resp.StatusCode,
+			}, errors.New(message)
 		}
 
-		if reflect.TypeOf(responseObject) != req.responseType {
-			return Response{
-					Status:     resp.StatusCode,
-					Raw:        resp,
-					StringBody: string(body),
-				},
-				errors.New("InkInferenceError: cannot infer the current response body to given inference type:" + req.responseType.Kind().String() + ". Take a look at Response.StringBody for proper inference.")
-		}
 		return Response{
 			Status:     resp.StatusCode,
 			Raw:        resp,
-			ParsedBody: responseObject,
 			StringBody: string(body),
 		}, nil
 	}
@@ -204,7 +216,6 @@ func doGetCall(req *Request) (Response, error) {
 	return Response{
 		Status:     resp.StatusCode,
 		Raw:        resp,
-		ParsedBody: string(body),
 		StringBody: string(body),
 	}, nil
 }

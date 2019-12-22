@@ -1,6 +1,7 @@
 package ink
 
 import (
+	"net/url"
 	"strings"
 	"errors"
 	"fmt"
@@ -10,11 +11,12 @@ import (
 const (
 	// InkClientAgent is the user agent header
 	InkClientAgent  = "Ink-http-client/1.1"
-	HTTP_USER_AGENT = "User-Agent"
+	// HeaderUserAgent supplies user-agent key 
+	HeaderUserAgent = "User-Agent"
 )
 
-func extractFromType(a interface{}) map[string]interface{} {
-	var extracted = make(map[string]interface{})
+func extractFromType(a interface{}) url.Values {
+	var extracted = url.Values{}
 
 	fields := reflect.TypeOf(a)
 	values := reflect.ValueOf(a)
@@ -25,11 +27,23 @@ func extractFromType(a interface{}) map[string]interface{} {
 		field := fields.Field(i)
 		value := values.Field(i)
 
-		extracted[field.Name] = value
+		extracted.Set(field.Name, value.String())
 	}
 
 	return extracted
 }
+
+// func injectToType(respMap map[string]interface{}, infer interface{}, target *interface{}) interface{} {
+// 	fields := reflect.TypeOf(infer)
+
+// 	num := fields.NumField()
+
+// 	for i := 0; i < num; i++ {
+// 		fields := fields.Field(i)
+
+		
+// 	}
+// }
 
 func getCountOfDollar(path string) int {
 	count := 0
