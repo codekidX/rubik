@@ -52,9 +52,9 @@ if err == nil {
 I call it magic because it really is, I had an hard time appending strings just to construct paths that has dynamic params in it, this feature makes it easy and is also a one-liner/
 
 ```go
-var type = "1"
+var cakeType = "1"
 var addon = "honey"
-resp, err := inkcl.Get("/pancake/$/addon/$", type, addon).Call()
+resp, err := inkcl.Get("/pancake/$/addon/$", cakeType, addon).Call()
 
 if err == nil {
     // Dp something with resp ...
