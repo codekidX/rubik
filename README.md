@@ -1,6 +1,3 @@
-Ink - Go HTTP Client
--------------
-
 <p align="center">
     <img src="https://i.imgur.com/WzoCr7D.png" width="500" height="281">
 </p>
