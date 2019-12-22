@@ -1,12 +1,15 @@
 package ink
 
 import (
+	"strings"
+	"errors"
+	"fmt"
 	"reflect"
 )
 
 const (
 	// InkClientAgent is the user agent header
-	InkClientAgent = "Ink-http-client/1.1"
+	InkClientAgent  = "Ink-http-client/1.1"
 	HTTP_USER_AGENT = "User-Agent"
 )
 
@@ -26,4 +29,31 @@ func extractFromType(a interface{}) map[string]interface{} {
 	}
 
 	return extracted
+}
+
+func getCountOfDollar(path string) int {
+	count := 0
+	for _, s := range path {
+		if s == '$' {
+			count++
+		}
+	}
+	return count
+}
+
+func substituteParam(path string, reqParams []string) (string, error) {
+	pathWithParams := path
+	dollarCount := getCountOfDollar(pathWithParams)
+	if len(reqParams) != dollarCount {
+		message := fmt.Sprintf("InkParamsSubstitutionError: ink was not able to substitute params because of params count mismatch - $ count: %d and params given: %d", dollarCount, len(reqParams))
+		return "", errors.New(message)
+	}
+	// we need a replaced path
+	if len(reqParams) > 0 {
+		for _, param := range reqParams {
+			pathWithParams = strings.Replace(pathWithParams, "$", param, -1)
+		}
+	}
+
+	return pathWithParams, nil
 }

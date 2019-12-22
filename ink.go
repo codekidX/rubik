@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -45,7 +47,7 @@ type Request struct {
 	requestType  string
 	json         bool
 	headers      map[string]interface{}
-	params       map[string]interface{}
+	params       []string
 	body         map[string]interface{}
 	query        map[string]interface{}
 	responseType reflect.Type
@@ -68,12 +70,13 @@ func New(baseURL string, timeout time.Duration) *Client {
 }
 
 // Get func is used to do a GET apicall
-func (c *Client) Get(path string) *RequestProcessor {
+func (c *Client) Get(path string, params ...string) *RequestProcessor {
 	var req = Request{}
 	req.client = c.httpClient
 	req.base = c.url
 	req.path = path
 	req.requestType = GET
+	req.params = params
 	return &RequestProcessor{
 		requset: &req,
 	}
@@ -94,18 +97,6 @@ func (rp *RequestProcessor) Query(data map[string]interface{}) *RequestProcessor
 // QueryOfType ..
 func (rp *RequestProcessor) QueryOfType(data interface{}) *RequestProcessor {
 	rp.requset.query = extractFromType(data)
-	return rp
-}
-
-// Params ..
-func (rp *RequestProcessor) Params(data map[string]interface{}) *RequestProcessor {
-	rp.requset.params = data
-	return rp
-}
-
-// ParamsOfType ..
-func (rp *RequestProcessor) ParamsOfType(data interface{}) *RequestProcessor {
-	rp.requset.params = extractFromType(data)
 	return rp
 }
 
@@ -144,8 +135,20 @@ func (rp *RequestProcessor) Call() (Response, error) {
 }
 
 func doGetCall(req *Request) (Response, error) {
-	var fullURL = req.base + req.path
-	var err error
+	var pathWithParams = req.path
+
+	if !strings.HasPrefix(pathWithParams, "/") {
+		pathWithParams = "/" + pathWithParams
+	}
+
+	pathWithParams, err := substituteParam(pathWithParams, req.params)
+	if err != nil {
+		return Response{}, err
+	}
+
+	var fullURL = req.base + pathWithParams
+	fmt.Println(fullURL)
+
 	var requestBody []byte
 	var httpRequest *http.Request
 
@@ -188,15 +191,14 @@ func doGetCall(req *Request) (Response, error) {
 					Raw:        resp,
 					StringBody: string(body),
 				},
-				errors.New("InkInferenceError: cannot infer the current response body to given inference type:" + req.responseType.Kind().String())
-		} else {
-			return Response{
-				Status:     resp.StatusCode,
-				Raw:        resp,
-				ParsedBody: responseObject,
-				StringBody: string(body),
-			}, nil
+				errors.New("InkInferenceError: cannot infer the current response body to given inference type:" + req.responseType.Kind().String() + ". Take a look at Response.StringBody for proper inference.")
 		}
+		return Response{
+			Status:     resp.StatusCode,
+			Raw:        resp,
+			ParsedBody: responseObject,
+			StringBody: string(body),
+		}, nil
 	}
 
 	return Response{
