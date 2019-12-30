@@ -49,7 +49,7 @@ if err == nil {
 
 #### Path Substitution
 
-I call it magic because it really is, I had an hard time appending strings just to construct paths that has dynamic params in it, this feature makes it easy and is also a one-liner/
+I call it magic because it really is, I had an hard time appending strings just to construct paths that has dynamic params in it, this feature makes it easy and is also a one-liner.
 
 ```go
 var cakeType = "1"
