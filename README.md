@@ -74,18 +74,22 @@ This lets ink know of 2 things:
 In conclution the API call is requested to `http://localhost:8080/getCake?cake_type=2`.
 
 
-<!-- #### Path Substitution
+#### Path Substitution
 
-I call it magic because it really is, I had an hard time appending strings just to construct paths that has dynamic params in it, this feature makes it easy and is also a one-liner.
+I had an hard time appending strings just to construct paths that has dynamic params in it, this feature makes it easy and is also a one-liner.
 
 ```go
-var cakeType = "1"
-var addon = "honey"
-resp, err := inkcl.Get("/pancake/$/addon/$", cakeType, addon).Call()
+    pancakeReq := PancakeRequestEnttity{
+        cakeType: 2,
+    }
 
-if err == nil {
-    // Dp something with resp ...
-}
+    cakeId := 1
+    pancakeReq.Route("/getCake/$", cakeId)
+
+    resp, err := inkcl.Get(pancakeReq)
+    if err != nil {
+        // Do something with resp ...
+    }
 ```
 
-Notice the dollar signs and an extra params, which just looks as it is. `$`s are substituted with each params in the order in which they are supplied to function. -->
+Notice the dollar signs and an extra param, which just looks as it is. `$`s are substituted with each params in the order in which they are supplied to function.
