@@ -60,7 +60,7 @@ func main() {
 ```
 
 This defines a **declarative** and **reusable** way to write the requirements of a single API. Here you exactly know what all this API call requires to fulfill it's request almost without a documentation.
-The `Route()` tells the RequestEntity that this is the path for current request. The response is of 
+The `Route()` tells the RequestEntity that this is the path for current request. The response is of type `ink.Response` which is explained in the section **Response** below.
 
 ### Ink Tags
 
