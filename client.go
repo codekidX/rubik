@@ -1,4 +1,4 @@
-package ink
+package cherry
 
 import (
 	"bytes"
@@ -32,6 +32,7 @@ type Response struct {
 	Raw        *http.Response
 	ParsedBody interface{}
 	StringBody string
+	IsJSON     bool
 }
 
 const (
@@ -151,6 +152,7 @@ func call(req *Request) (Response, error) {
 			message := fmt.Sprintf("InkInferenceError: Cannot infer a non-json/non-mappable value to specified type: %s. Response.ParsedBody/Response.StringBody of type map is present for access.", responseType.Name())
 			return Response{
 				Status:     resp.StatusCode,
+				IsJSON:     false,
 				StringBody: string(body),
 			}, errors.New(message)
 		}
@@ -158,6 +160,7 @@ func call(req *Request) (Response, error) {
 		return Response{
 			Status:     resp.StatusCode,
 			Raw:        resp,
+			IsJSON:     true,
 			ParsedBody: req.responseType,
 			StringBody: string(body),
 		}, nil
@@ -166,6 +169,7 @@ func call(req *Request) (Response, error) {
 	return Response{
 		Status:     resp.StatusCode,
 		Raw:        resp,
+		IsJSON:     false,
 		ParsedBody: req.responseType,
 		StringBody: string(body),
 	}, nil

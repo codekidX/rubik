@@ -1,3 +1,3 @@
-module github.com/codekidX/ink
+module github.com/codekidX/cherry
 
 go 1.12

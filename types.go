@@ -1,4 +1,4 @@
-package ink
+package cherry
 
 import (
 	"fmt"
@@ -32,6 +32,10 @@ func (re *RequestEntity) Route(path string, values ...string) {
 // GetCtx ...
 func (re RequestEntity) GetCtx() *Request {
 	return re.request
+}
+
+type BlankRequestEntity struct {
+	RequestEntity
 }
 
 // Values that transend url.Values with strict typing

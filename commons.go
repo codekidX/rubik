@@ -1,4 +1,4 @@
-package ink
+package cherry
 
 import (
 	"bytes"
