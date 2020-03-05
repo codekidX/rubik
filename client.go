@@ -36,9 +36,13 @@ type Response struct {
 }
 
 const (
-	GET    = "GET"
-	POST   = "POST"
-	PUT    = "PUT"
+	// GET method
+	GET = "GET"
+	// POST method
+	POST = "POST"
+	// PUT method
+	PUT = "PUT"
+	// DELETE method
 	DELETE = "DELETE"
 )
 

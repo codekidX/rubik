@@ -2,6 +2,7 @@ package cherry
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -124,6 +125,28 @@ func (c *Cherry) Listen(args ...string) error {
 
 func (c *Cherry) boot() {
 	// write the boot sequence of the server
+	for _, router := range c.routers {
+		ourPath := router.basePath
+		for _, route := range router.routes {
+			finalPath := ourPath + route.Path
+			c.mux.HandleFunc(finalPath, func(writer http.ResponseWriter, request *http.Request) {
+				if route.Entity != nil {
+					validEntity := checkIsEntity(route.Entity)
+					if validEntity {
+						return
+					}
+					fmt.Println("Your Entity must extend cherry.RequestEntity struct.")
+				} else {
+					fmt.Println(fmt.Sprintf("Please pass in a RequestEntity for route: %s", route.Path))
+					return
+				}
+				//validReq := route.Validate()
+				//if validReq {
+				//
+				//}
+			})
+		}
+	}
 }
 
 // Add injects a cherry.Route definition to the main http server instance
