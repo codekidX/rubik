@@ -25,7 +25,7 @@ type Client struct {
 }
 
 // Response is a struct that is returned by every client after
-// requrest is made successfull
+// request is made successful
 type Response struct {
 	Status     int
 	Body       interface{}
