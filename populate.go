@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func populateRequest(entity interface{}, c *Client) (*Request, error) {
+func populateRequest(entity interface{}, c *Client) (*Payload, error) {
 	isEntity := checkIsEntity(entity)
 
 	if !isEntity {
@@ -33,7 +33,7 @@ func populateRequest(entity interface{}, c *Client) (*Request, error) {
 	return &req, nil
 }
 
-func populateParamsAndQuery(req *Request) (string, error) {
+func populateParamsAndQuery(req *Payload) (string, error) {
 	var pathWithParams = req.path
 
 	if !strings.HasPrefix(pathWithParams, "/") {
@@ -54,7 +54,7 @@ func populateParamsAndQuery(req *Request) (string, error) {
 	return fullURL, nil
 }
 
-func populateHTTPRequest(req *Request, fullURL string) (*http.Request, error) {
+func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 	var err error
 	var requestBody []byte
 	var httpRequest *http.Request
@@ -79,7 +79,7 @@ func populateHTTPRequest(req *Request, fullURL string) (*http.Request, error) {
 	}
 
 	for k, v := range req.headers {
-		httpRequest.Header.Set(k , v[0])
+		httpRequest.Header.Set(k, v[0])
 	}
 
 	httpRequest = httpRequest.WithContext(req.context)

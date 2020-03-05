@@ -16,7 +16,7 @@ type RequestEntity struct {
 	entityType string
 	route      string
 	Params     []string
-	request    *Request
+	request    *Payload
 	FormData   bool
 	URLEncoded bool
 	JSON       bool
@@ -30,7 +30,7 @@ func (re *RequestEntity) Route(path string, values ...string) {
 }
 
 // GetCtx ...
-func (re RequestEntity) GetCtx() *Request {
+func (re RequestEntity) GetCtx() *Payload {
 	return re.request
 }
 
@@ -38,7 +38,7 @@ type BlankRequestEntity struct {
 	RequestEntity
 }
 
-// Values that transend url.Values with strict typing
+// Values that transcend url.Values with strict typing
 type Values map[string]interface{}
 
 // Encode ...

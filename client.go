@@ -42,9 +42,9 @@ const (
 	DELETE = "DELETE"
 )
 
-// Request holds the data between the intermediate state of Client
+// Payload holds the data between the intermediate state of Client
 // and PostProcessor
-type Request struct {
+type Payload struct {
 	client       http.Client
 	base         string
 	path         string
@@ -114,11 +114,11 @@ func (c *Client) Delete(entity interface{}) (Response, error) {
 }
 
 // Cancel ...
-func (r *Request) Cancel() {
+func (r *Payload) Cancel() {
 	r.cancel()
 }
 
-func call(req *Request) (Response, error) {
+func call(req *Payload) (Response, error) {
 
 	fullURL, err := populateParamsAndQuery(req)
 

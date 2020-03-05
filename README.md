@@ -2,8 +2,7 @@
     <img src="https://i.imgur.com/NL7tXZj.png" width="500" height="281">
 </p>
 
-Ink aims to ease and speedup client-side REST development with Go in a declarative manner. The server side development was too quick, simple and easy and when I tried to create a cli for my project [cloak](https://github.com/codekidX/cloak) it was too time consuming and repetitve. I wanted something that would speed up my client-side development with Go and I ended up writing **Ink** - a HTTP client that let's you write Go REST API calls in a blink.
-
+Cherry aims to ease and speedup REST development with Go in a declarative manner.
 
 ### Importing
 
@@ -21,31 +20,7 @@ import "github.com/codekidX/cherry"
 
 ### Getting Started
 
-The first thing we need do is create a base **Cherry** client that will be common across calls.
-
-```go
-inkcl := ink.NewClient("http://localhost:8080", time.Second * 30)
-```
-In order to make any type of API call, you need to create a `RequestEntity`. In **cherry** RequestEntity is nothing but a reusable struct for making `type-safe` request.
-
-Let's create a new RequestEntity
-
-
-#### Example: Simple GET call
-
-```go
-func main() {
-    req := cherry.BlankRequestEntity{}
-    req.Route("/")
-    resp, err := chcl.Get(req)
-
-    if resp.Status == 200 && err == nil {
-        // Do something with resp
-    }
-}
-```
-
-#### Example: GET call with additional query
+#### RequestEntity
 
 ```go
 type PancakeRequestEntity struct {
@@ -54,7 +29,7 @@ type PancakeRequestEntity struct {
 }
 ```
 
-The bluprint/requirements for a single API endpoint is set up. Now let's do a GET call with `RequestEntity`. The struct tags for chcl is explained below in **Cherry Tags** section.
+The blueprint/requirements for a single API endpoint is set up. Now let's do a GET call with `RequestEntity`. The struct tags for chcl is explained below in **Cherry Tags** section.
 
 ```go
 func main() {
@@ -71,7 +46,7 @@ The `Route()` tells the RequestEntity that this is the path for current request.
 
 ### Cherry Tags
 
-Ink tags are really good way to define the necessity of API call, in the above example we defined our tag as `cherry:"cake_type|query"`.
+Cherry tags are really good way to define the necessity of API call, in the above example we defined our tag as `cherry:"cake_type|query"`.
 
 This lets cherry know of 2 things:
 

@@ -20,8 +20,8 @@ const (
 	HeaderUserAgent = "User-Agent"
 )
 
-func extractFromType(a interface{}) (Request, error) {
-	var extracted = Request{}
+func extractFromType(a interface{}) (Payload, error) {
+	var extracted = Payload{}
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -57,7 +57,7 @@ func extractFromType(a interface{}) (Request, error) {
 			extracted.formData = isFormData
 			extracted.path = route
 			if route == "" {
-				return Request{}, errors.New("InkExtractionError: Ink RequestEntity is initialized without a Route parameter")
+				return Payload{}, errors.New("InkExtractionError: Ink RequestEntity is initialized without a Route parameter")
 			}
 			continue
 		}
@@ -70,7 +70,7 @@ func extractFromType(a interface{}) (Request, error) {
 		}
 
 		if !strings.Contains(op, "|") {
-			return Request{}, errors.New("InkTagMalformed: Ink tag must be of format key|request_medium('body,query etc..') ")
+			return Payload{}, errors.New("InkTagMalformed: Ink tag must be of format key|request_medium('body,query etc..') ")
 		}
 
 		reqTag := strings.Split(op, "|")
@@ -105,7 +105,7 @@ func extractFromType(a interface{}) (Request, error) {
 					file, err := os.Open(f.Path)
 
 					if err != nil {
-						return Request{}, err
+						return Payload{}, err
 					}
 
 					defer file.Close()
@@ -113,13 +113,13 @@ func extractFromType(a interface{}) (Request, error) {
 					part, err := writer.CreateFormFile(reqTag[0], file.Name())
 
 					if err != nil {
-						return Request{}, err
+						return Payload{}, err
 					}
 
 					_, err = io.Copy(part, file)
 
 					if err != nil {
-						return Request{}, err
+						return Payload{}, err
 					}
 				} else if f.OSFile.Name() != "" {
 					defer f.OSFile.Close()
@@ -127,13 +127,13 @@ func extractFromType(a interface{}) (Request, error) {
 					part, err := writer.CreateFormFile(reqTag[0], f.OSFile.Name())
 
 					if err != nil {
-						return Request{}, err
+						return Payload{}, err
 					}
 
 					_, err = io.Copy(part, f.OSFile)
 
 					if err != nil {
-						return Request{}, err
+						return Payload{}, err
 					}
 				}
 			} else if field.Type == reflect.TypeOf([]File{}) {
@@ -144,7 +144,7 @@ func extractFromType(a interface{}) (Request, error) {
 						file, err := os.Open(f.Path)
 
 						if err != nil {
-							return Request{}, err
+							return Payload{}, err
 						}
 
 						defer file.Close()
@@ -152,13 +152,13 @@ func extractFromType(a interface{}) (Request, error) {
 						part, err := writer.CreateFormFile(reqTag[0], file.Name())
 
 						if err != nil {
-							return Request{}, err
+							return Payload{}, err
 						}
 
 						_, err = io.Copy(part, file)
 
 						if err != nil {
-							return Request{}, err
+							return Payload{}, err
 						}
 					} else if f.OSFile.Name() != "" {
 						defer f.OSFile.Close()
@@ -166,13 +166,13 @@ func extractFromType(a interface{}) (Request, error) {
 						part, err := writer.CreateFormFile(reqTag[0], f.OSFile.Name())
 
 						if err != nil {
-							return Request{}, err
+							return Payload{}, err
 						}
 
 						_, err = io.Copy(part, f.OSFile)
 
 						if err != nil {
-							return Request{}, err
+							return Payload{}, err
 						}
 					}
 				}
@@ -183,7 +183,7 @@ func extractFromType(a interface{}) (Request, error) {
 			break
 		default:
 			message := fmt.Sprintf("InkUnknownMedium: Not a medium: %s", reqTag[1])
-			return Request{}, errors.New(message)
+			return Payload{}, errors.New(message)
 		}
 
 	}
@@ -196,7 +196,7 @@ func extractFromType(a interface{}) (Request, error) {
 	err := writer.Close()
 
 	if err != nil {
-		return Request{}, err
+		return Payload{}, err
 	}
 
 	extracted.formBody = body
