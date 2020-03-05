@@ -6,6 +6,7 @@ import (
 )
 
 var App = &Cherry{
+	mux: http.NewServeMux(),
 	routers: []Router{
 		{
 			basePath: "/",
@@ -32,6 +33,7 @@ type Middleware func(req Request, next NextFunc)
 type Cherry struct {
 	State     interface{}
 	Config    Config
+	mux       *http.ServeMux
 	routers   []Router
 	routeInfo []RouteInfo
 	emitters  map[string]EmitterFunc
@@ -83,7 +85,7 @@ func (a *Cherry) Create(index string) Router {
 }
 
 func (c *Cherry) Plug(plugin Plugin) {
-	http.Handle(plugin.Pattern, plugin.Handler)
+	c.mux.Handle(plugin.Pattern, plugin.Handler)
 }
 
 func (s *Cherry) AddEmitter(event string, efunc EmitterFunc) {
@@ -104,7 +106,7 @@ func (c *Cherry) Listen(args ...string) error {
 	if c.Config.GenerateDocs {
 		// TODO: write code to genereate Swagger Docs
 	}
-	return http.ListenAndServe(args[0], nil)
+	return http.ListenAndServe(args[0], c.mux)
 }
 
 func (ro *Router) Add(r Route) {
