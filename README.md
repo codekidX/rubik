@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://i.imgur.com/0EG8rcI.png" width="500" height="281">
+    <img src="https://i.imgur.com/ulErcPo.png" width="500" height="281">
 </p>
 
 Cherry aims to ease and speedup REST development with Go in a declarative manner.
