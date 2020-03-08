@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"time"
 )
@@ -117,9 +119,46 @@ func (c *Client) Delete(entity interface{}) (Response, error) {
 	return call(req)
 }
 
+// Download method downloads an url from your specified Entity->Path
+// to TargetFilePath passed to the entity
+func (c *Client) Download(entity DownloadRequestEntity) error {
+	// source
+	url := c.url + safePath(entity.RequestEntity.route)
+
+	err := downloadCall(url, entity.TargetFilePath)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Cancel ...
 func (r *Payload) Cancel() {
 	r.cancel()
+}
+
+func downloadCall(url, target string) error {
+	resp, err := http.Get(url)
+
+	if err != nil {
+		return errors.New("CherryDownloadError: Cannot download file. Raw: " + err.Error())
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(target)
+
+	if err != nil {
+		return errors.New("CherryDownloadError: Cannot create target file. Raw: " + err.Error())
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return errors.New("CherryDownloadError: Cannot copy to target file. Raw: " + err.Error())
+	}
+	return nil
 }
 
 func call(req *Payload) (Response, error) {

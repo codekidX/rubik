@@ -24,18 +24,33 @@ type RequestEntity struct {
 }
 
 // Route ...
-func (re *RequestEntity) Route(path string, values ...string) {
+func (re RequestEntity) Route(path string, values ...string) RequestEntity {
 	re.route = path
 	re.Params = values
+	return re
+}
+
+// Route ...
+func (re DownloadRequestEntity) Route(path string, values ...string) DownloadRequestEntity {
+	re.route = path
+	re.Params = values
+	return re
 }
 
 // GetCtx ...
-func (re RequestEntity) GetCtx() *Payload {
-	return re.request
-}
+// func (re RequestEntity) GetCtx() *Payload {
+// 	return re.request
+// }
 
+// BlankRequestEntity ...
 type BlankRequestEntity struct {
 	RequestEntity
+}
+
+// DownloadRequestEntity ...
+type DownloadRequestEntity struct {
+	RequestEntity
+	TargetFilePath string
 }
 
 // Values that transcend url.Values with strict typing

@@ -20,6 +20,8 @@ const (
 	HeaderUserAgent = "User-Agent"
 )
 
+// extractFromType takes in an RequestEntity and returns a final payload
+// that is to be passed to the net/http module
 func extractFromType(a interface{}) (Payload, error) {
 	var extracted = Payload{}
 	body := &bytes.Buffer{}
@@ -261,6 +263,19 @@ func checkIsEntity(entity interface{}) bool {
 		}
 	}
 	return result
+}
+
+func isEmptyEntity(entity struct{}) bool {
+	refEn := reflect.TypeOf(entity).Elem()
+	newEn := reflect.New(refEn)
+	return reflect.DeepEqual(entity, newEn)
+}
+
+func safePath(path string) string {
+	if strings.HasPrefix("/", path) {
+		return path
+	}
+	return "/" + path
 }
 
 // func checkReqInputs(entity interface{}) bool {

@@ -14,7 +14,7 @@ func populateRequest(entity interface{}, c *Client) (*Payload, error) {
 	isEntity := checkIsEntity(entity)
 
 	if !isEntity {
-		panic(errors.New("InkEntityError: The entity you are passing must extend RequestEntity. Take a look at codekidx.github.io/ink for more info"))
+		panic(errors.New("CherryEntityError: The entity you are passing must extend RequestEntity. Take a look at https://okcherry.github.io/troubleshooting#CherryEntityError for more info"))
 	}
 
 	req, err := extractFromType(entity)
