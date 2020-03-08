@@ -1,4 +1,4 @@
-module github.com/codekidX/cherry
+module github.com/okcherry/cherry
 
 go 1.12
 
