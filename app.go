@@ -1,27 +1,33 @@
 package cherry
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/BurntSushi/toml"
+	i "github.com/okcherry/cherry/pkg"
 )
 
 // App is a singleton instance of cherry server
 var App = &Cherry{
-	mux: http.NewServeMux(),
-	routers: []Router{
-		{
-			basePath: "/",
-		},
-	},
+	mux:     http.NewServeMux(),
+	routers: []Router{},
 }
 
 type EmitterFunc func()
 
 type NextFunc func(response interface{})
+
+type restError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func (re restError) Error() string {
+	return re.Message
+}
 
 type Plugin struct {
 	Pattern     string
@@ -34,7 +40,7 @@ type Middleware func(req Request, next NextFunc)
 // Cherry is the instance of Server which holds all the necessary information of apis
 type Cherry struct {
 	State     interface{}
-	Config    *Config
+	Config    *i.Config
 	mux       *http.ServeMux
 	routers   []Router
 	routeInfo []RouteInfo
@@ -65,8 +71,8 @@ type Route struct {
 	JSON                 bool
 	Entity               interface{}
 	Middlewares          []Middleware
-	Validate             func(entity interface{}) bool
-	Controller           func(entity interface{}) interface{}
+	Validate             func(entity interface{}) (bool, string)
+	Controller           func(entity interface{}) (interface{}, error)
 }
 
 // RouteInfo ...
@@ -132,28 +138,26 @@ func (c *Cherry) Listen(args ...string) error {
 		// load port from environ
 		if os.Getenv("CHERRY_ENV") != "" {
 			// get specific env config
-			switch os.Getenv("CHERRY_ENV") {
-			case "development":
-				port = c.Config.Cherry.Default.Port
-				break
-			case "production":
-				port = c.Config.Cherry.Production.Port
-				break
-			}
+			conf := c.Config.App[os.Getenv("CHERRY_ENV")]
+			port = conf.Port
 		} else {
-			debugMsg("CHERRY_ENV is not specified so using cherry.default config")
-			port = c.Config.Cherry.Default.Port
+			i.DebugMsg("CHERRY_ENV is not specified so using cherry.default config")
+			port = ":8000"
 		}
-		cherryMsg("Started on port: " + port[1:])
+		i.CherryMsg("Started on port: " + port[1:])
 		return http.ListenAndServe(port, c.mux)
 	} else if c.Config == nil && len(args) == 0 {
-		port = ":6666"
-		cherryMsg("Started on port: " + port[1:])
+		port = ":6000"
+		i.CherryMsg("Started on port: " + port[1:])
 		return http.ListenAndServe(port, c.mux)
 	}
 
-	cherryMsg("Started on port: " + args[0][1:])
+	i.CherryMsg("Started on port: " + args[0][1:])
 	return http.ListenAndServe(args[0], c.mux)
+}
+
+func (c *Cherry) RestError(code int, message string) restError {
+	return restError{Code: code, Message: message}
 }
 
 func (c *Cherry) boot() error {
@@ -161,35 +165,62 @@ func (c *Cherry) boot() error {
 	var errored bool
 	// write the boot sequence of the server
 	for _, router := range c.routers {
-		ourPath := router.basePath
-		for _, route := range router.routes {
-			finalPath := ourPath + route.Path
-			debugMsg("Booting => " + finalPath)
+		for index := 0; index < len(router.routes); index++ {
+			route := router.routes[index]
+			finalPath := router.basePath + route.Path
+			i.DebugMsg("Booting => " + finalPath)
 
 			if route.Entity != nil {
 				validEntity := checkIsEntity(route.Entity)
 				if !validEntity {
-					errorMsg("Your Entity must extend cherry.RequestEntity struct")
+					i.ErrorMsg("Your Entity must extend cherry.RequestEntity struct")
 					errored = true
 					continue
 				}
 			} else {
-				warnMsg(fmt.Sprintf("Please pass in a RequestEntity for route: %s", route.Path))
+				i.WarnMsg(fmt.Sprintf("Please pass in a RequestEntity for route: %s", route.Path))
 				continue
 			}
 
-			c.mux.HandleFunc(finalPath, func(writer http.ResponseWriter, request *http.Request) {
+			if route.Controller != nil {
+				c.mux.HandleFunc(finalPath, func(writer http.ResponseWriter, request *http.Request) {
+					resp, err := route.Controller(route.Entity)
+					re, ok := err.(restError)
 
-				//validReq := route.Validate()
-				//if validReq {
-				//
-				//}
-			})
+					// error handling
+					if err != nil {
+						if ok {
+							writer.Header().Set("Content-Type", "application/json")
+							writer.WriteHeader(re.Code)
+							b, _ := json.Marshal(err)
+							writer.Write(b)
+							return
+						}
+
+						// we now make sure that it is not a normal error without a code
+						if err.Error() != "" {
+							writer.Header().Set("Content-Type", "application/json")
+							writer.WriteHeader(500)
+							b, _ := json.Marshal(err.Error())
+							writer.Write(b)
+						}
+					}
+
+					a, _ := resp.(string)
+					writer.Write([]byte(a))
+					//validReq := route.Validate()
+					//if validReq {
+					//
+					//}
+				})
+			} else {
+				i.WarnMsg("ROUTE_NOT_BOOTED - There is no controller assigned for route: " + finalPath)
+			}
 		}
 	}
 
 	if errored {
-		return errors.New("Encountered following errors while running cherry boot sequence")
+		return errors.New("encountered following errors while running cherry boot sequence")
 	}
 	return nil
 }
@@ -201,20 +232,6 @@ func (ro *Router) Add(r Route) {
 
 // Load checks for config.toml and loads all the environment variables
 func (c *Cherry) checkForConfig() {
-	dir, _ := os.Getwd()
-	configPath := dir + "/cherry.toml"
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		debugMsg("Did not find cherry.toml. Booting server without one.")
-		return
-	}
-
-	var config Config
-	_, err := toml.DecodeFile(configPath, &config)
-	if err != nil {
-		warnMsg("cherry.toml was found but could not parse it. Error: " + err.Error())
-		return
-	}
-
-	c.Config = &config
-	debugMsg("Loaded Config successfully")
+	c.Config = i.GetCherryConfig()
+	i.DebugMsg("Loaded Config successfully")
 }
