@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	// InkClientAgent is the user agent header
-	InkClientAgent = "Ink-http-client/1.1"
+	// ClientAgent is the user agent header
+	ClientAgent = "cherry-http-client/1.1"
 	// HeaderUserAgent supplies user-agent key
 	HeaderUserAgent = "User-Agent"
 )

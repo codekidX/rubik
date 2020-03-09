@@ -88,7 +88,7 @@ func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 		return nil, err
 	}
 
-	httpRequest.Header.Set(HeaderUserAgent, InkClientAgent)
+	httpRequest.Header.Set(HeaderUserAgent, ClientAgent)
 
 	return httpRequest, nil
 }
