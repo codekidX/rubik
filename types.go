@@ -1,4 +1,4 @@
-package cherry
+package sketch
 
 import (
 	"fmt"

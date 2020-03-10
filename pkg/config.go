@@ -45,7 +45,7 @@ func (nm NotationMap) Get(accessor string) (interface{}, error) {
 		return finalValue, nil
 	}
 
-	return nm, nil
+	return nm[accessor], nil
 }
 
 // Set value of a accessor using dot notations from NotationMap
@@ -92,24 +92,18 @@ func noSuchKeyErr(key, acc string) error {
 	return errors.New("no such key: " + key + " for notation: " + acc)
 }
 
-// BaseConfig for cherry server related variables
-type BaseConfig struct {
-	Port      string `toml:"port"`
-	ShouldLog bool   `toml:"should_log"`
-}
-
-// AppConfig are config related to cherry app
-type AppConfig struct {
-	Port       string   `toml:"port"`
-	Multiple   bool     `toml:"multi"`
-	ClientPath []string `toml:"client_path"`
-	ServerPath []string `toml:"server_path"`
+type Project struct {
+	Name         string `toml:"name"`
+	Path         string `toml:"path"`
+	Watchable    bool   `toml:"watchable"`
+	Communicable bool   `toml:"communicable"`
 }
 
 // Config is the main config for your cherry server
 type Config struct {
-	Project NotationMap `toml:"project"`
-	App     map[string]AppConfig
+	ProjectName string    `toml:"name"`
+	IsFlat      bool      `toml:"flat"`
+	App         []Project `toml:"app"`
 }
 
 // GetCherryConfigPath returns path of cherry config of current project

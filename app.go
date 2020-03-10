@@ -1,18 +1,22 @@
-package cherry
+package sketch
 
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 
-	i "github.com/okcherry/cherry/pkg"
+	"github.com/julienschmidt/httprouter"
+
+	"github.com/BurntSushi/toml"
+
+	i "github.com/oksketch/sketch/pkg"
 )
 
 // App is a singleton instance of cherry server
-var App = &Cherry{
-	mux:     http.NewServeMux(),
+var app = &Sketch{
+	mux:     httprouter.New(),
 	routers: []Router{},
 }
 
@@ -30,31 +34,31 @@ func (re restError) Error() string {
 }
 
 type Plugin struct {
-	Pattern     string
-	Handler     http.Handler
-	HandlerFunc http.HandlerFunc
+	Method  string
+	Pattern string
+	Handler httprouter.Handle
 }
 
 type Middleware func(req Request, next NextFunc)
 
 // Cherry is the instance of Server which holds all the necessary information of apis
-type Cherry struct {
-	State     interface{}
-	Config    *i.Config
-	mux       *http.ServeMux
-	routers   []Router
-	routeInfo []RouteInfo
-	emitters  map[string]EmitterFunc
+type Sketch struct {
+	Config       interface{}
+	intermConfig i.NotationMap
+	mux          *httprouter.Router
+	routers      []Router
+	routeInfo    []RouteInfo
+	emitters     map[string]EmitterFunc
 }
 
 // Request ...
 type Request struct {
 	RawRequest *http.Request
-	cherry     *Cherry
+	sketch     *Sketch
 }
 
 func (req Request) GetRouteInfo() []RouteInfo {
-	return req.cherry.routeInfo
+	return req.sketch.routeInfo
 }
 
 type Router struct {
@@ -66,12 +70,13 @@ type Router struct {
 // Route is the culmination of
 type Route struct {
 	Path                 string
+	Method               string
 	Description          string
 	ResponseDeclarations map[int]string
 	JSON                 bool
 	Entity               interface{}
 	Middlewares          []Middleware
-	Validate             func(entity interface{}) (bool, string)
+	Validate             func(entity interface{}) error
 	Controller           func(entity interface{}) (interface{}, error)
 }
 
@@ -84,36 +89,73 @@ type RouteInfo struct {
 	Responses   map[int]string
 }
 
+func FromStorage(fileName string) ([]byte, error) {
+	pwd, _ := os.Getwd()
+	var filePath = pwd + string(os.PathSeparator) + "storage" + string(os.PathSeparator) + fileName
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, errors.New("file does not exist")
+	}
+
+	b, err := ioutil.ReadFile(filePath)
+
+	if err != nil {
+		return nil, err
+	}
+	return b, err
+}
+
+func Load(config interface{}) error {
+	env := os.Getenv("CHERRY_ENV")
+	pwd, _ := os.Getwd()
+	var configPath string
+	if env != "" {
+		configPath = pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + env + ".toml"
+	} else {
+		configPath = pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "default.toml"
+	}
+
+	_, err := toml.DecodeFile(configPath, config)
+	app.Config = config
+
+	if err != nil {
+		return err
+	}
+	_, err = toml.DecodeFile(configPath, &app.intermConfig)
+
+	return nil
+}
+
 // Create ...
-func (c *Cherry) Create(index string) Router {
+func Create(index string) Router {
 	return Router{
 		basePath: index,
 	}
 }
 
 // Use ...
-func (c *Cherry) Use(router Router) {
-	c.routers = append(c.routers, router)
+func Use(router Router) {
+	app.routers = append(app.routers, router)
 }
 
-// Plug ...
-func (c *Cherry) Plug(plugin Plugin) {
-	c.mux.Handle(plugin.Pattern, plugin.Handler)
+//Plug ...
+func Plug(plugin Plugin) {
+	app.mux.Handle(plugin.Method, plugin.Pattern, plugin.Handler)
 }
 
 // PlugFunc ...
-func (c *Cherry) PlugFunc(plugin Plugin) {
-	c.mux.HandleFunc(plugin.Pattern, plugin.HandlerFunc)
+func PlugAfter(plugin Plugin) {
+	app.mux.Handle(plugin.Method, plugin.Pattern, plugin.Handler)
 }
 
 // AddEmitter ...
-func (c *Cherry) AddEmitter(event string, efunc EmitterFunc) {
-	c.emitters[event] = efunc
+func AddEmitter(event string, efunc EmitterFunc) {
+	app.emitters[event] = efunc
 }
 
 // Emit ...
-func (c *Cherry) Emit(event string) error {
-	eFunc := c.emitters[event]
+func Emit(event string) error {
+	eFunc := app.emitters[event]
 	if eFunc == nil {
 		return errors.New("Emitter with event: " + event + " is not registered. Call AddEmitter() to add an emitter function to cherry server.")
 	}
@@ -122,52 +164,57 @@ func (c *Cherry) Emit(event string) error {
 }
 
 // Listen ...
-func (c *Cherry) Listen(args ...string) error {
+func Listen(args ...string) error {
 	// if c.Config.GenerateDocs {
 	// TODO: write code to genereate /sdk/tools/swagger.json route
 	// }
 
-	err := c.boot()
+	err := boot()
 
 	if err != nil {
 		panic(err)
 	}
 
 	var port string
-	if c.Config != nil {
+	if app.Config != nil {
 		// load port from environ
-		if os.Getenv("CHERRY_ENV") != "" {
-			// get specific env config
-			conf := c.Config.App[os.Getenv("CHERRY_ENV")]
-			port = conf.Port
-		} else {
-			i.DebugMsg("CHERRY_ENV is not specified so using cherry.default config")
+		val, err := app.intermConfig.Get("port")
+		portVal, ok := val.(string)
+
+		if err != nil || !ok {
 			port = ":8000"
+		} else {
+			port = portVal
 		}
+
 		i.CherryMsg("Started on port: " + port[1:])
-		return http.ListenAndServe(port, c.mux)
-	} else if c.Config == nil && len(args) == 0 {
-		port = ":6000"
+		return http.ListenAndServe(port, app.mux)
+	} else if app.Config == nil && len(args) == 0 {
+		port = ":8000"
 		i.CherryMsg("Started on port: " + port[1:])
-		return http.ListenAndServe(port, c.mux)
+		return http.ListenAndServe(port, app.mux)
+	} else {
+		port = ":8000"
 	}
 
 	i.CherryMsg("Started on port: " + args[0][1:])
-	return http.ListenAndServe(args[0], c.mux)
+	return http.ListenAndServe(args[0], app.mux)
 }
 
-func (c *Cherry) RestError(code int, message string) restError {
+func RestError(code int, message string) restError {
 	return restError{Code: code, Message: message}
 }
 
-func (c *Cherry) boot() error {
-	c.checkForConfig()
+func boot() error {
+	//c.checkForConfig()
 	var errored bool
 	// write the boot sequence of the server
-	for _, router := range c.routers {
+	for _, router := range app.routers {
 		for index := 0; index < len(router.routes); index++ {
 			route := router.routes[index]
-			finalPath := router.basePath + route.Path
+
+			finalPath := safeRouterPath(router.basePath) + safeRoutePath(route.Path)
+
 			i.DebugMsg("Booting => " + finalPath)
 
 			if route.Entity != nil {
@@ -177,14 +224,18 @@ func (c *Cherry) boot() error {
 					errored = true
 					continue
 				}
-			} else {
-				i.WarnMsg(fmt.Sprintf("Please pass in a RequestEntity for route: %s", route.Path))
-				continue
 			}
 
 			if route.Controller != nil {
-				c.mux.HandleFunc(finalPath, func(writer http.ResponseWriter, request *http.Request) {
-					resp, err := route.Controller(route.Entity)
+				app.mux.GET(finalPath, func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+					// TODO: parse entity and then pass to the controller -- NOT LIKE THIS !!
+					var en interface{}
+					if route.Entity == nil {
+						en = BlankRequestEntity{}
+					} else {
+						en = route.Entity
+					}
+					resp, err := route.Controller(en)
 					re, ok := err.(restError)
 
 					// error handling
@@ -193,7 +244,7 @@ func (c *Cherry) boot() error {
 							writer.Header().Set("Content-Type", "application/json")
 							writer.WriteHeader(re.Code)
 							b, _ := json.Marshal(err)
-							writer.Write(b)
+							_, _ = writer.Write(b)
 							return
 						}
 
@@ -202,12 +253,21 @@ func (c *Cherry) boot() error {
 							writer.Header().Set("Content-Type", "application/json")
 							writer.WriteHeader(500)
 							b, _ := json.Marshal(err.Error())
-							writer.Write(b)
+							_, _ = writer.Write(b)
+							return
 						}
 					}
 
-					a, _ := resp.(string)
-					writer.Write([]byte(a))
+					a, ok := resp.(string)
+					if ok {
+						_, _ = writer.Write([]byte(a))
+						return
+					}
+
+					b, ok := resp.([]byte)
+					if ok {
+						_, _ = writer.Write(b)
+					}
 					//validReq := route.Validate()
 					//if validReq {
 					//
@@ -230,8 +290,22 @@ func (ro *Router) Add(r Route) {
 	ro.routes = append(ro.routes, r)
 }
 
+// StorageRoutes create routes inside router that links your storage/fileName to the Router base path
+func (ro *Router) StorageRoutes(fileNames ...string) {
+	for _, file := range fileNames {
+		r := Route{
+			Method: "GET",
+			Path:   safeRoutePath(file),
+			Controller: func(entity interface{}) (interface{}, error) {
+				return FromStorage(file)
+			},
+		}
+		ro.routes = append(ro.routes, r)
+	}
+}
+
 // Load checks for config.toml and loads all the environment variables
-func (c *Cherry) checkForConfig() {
-	c.Config = i.GetCherryConfig()
+func checkForConfig() {
+	app.Config = i.GetCherryConfig()
 	i.DebugMsg("Loaded Config successfully")
 }

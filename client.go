@@ -1,4 +1,4 @@
-package cherry
+package sketch
 
 import (
 	"bytes"
@@ -119,13 +119,17 @@ func (c *Client) Delete(entity interface{}) (Response, error) {
 	return call(req)
 }
 
-// Download method downloads an url from your specified Entity->Path
+// Download method downloads file from an url from your specified Entity->Route
 // to TargetFilePath passed to the entity
 func (c *Client) Download(entity DownloadRequestEntity) error {
-	// source
-	url := c.url + safePath(entity.RequestEntity.route)
 
-	err := downloadCall(url, entity.TargetFilePath)
+	if entity.route == "" {
+		return errors.New("DownloadRequestEntity must have a route initialized using Route() method")
+	}
+
+	// source
+	finalUrl := c.url + safeRoutePath(entity.route)
+	err := downloadCall(finalUrl, entity.TargetFilePath)
 
 	if err != nil {
 		return err

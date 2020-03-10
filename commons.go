@@ -1,4 +1,4 @@
-package cherry
+package sketch
 
 import (
 	"bytes"
@@ -271,8 +271,15 @@ func isEmptyEntity(entity struct{}) bool {
 	return reflect.DeepEqual(entity, newEn)
 }
 
-func safePath(path string) string {
-	if strings.HasPrefix("/", path) {
+func safeRouterPath(path string) string {
+	if strings.HasSuffix(path, "/") {
+		return strings.TrimSuffix(path, "/")
+	}
+	return path
+}
+
+func safeRoutePath(path string) string {
+	if strings.HasPrefix(path, "/") {
 		return path
 	}
 	return "/" + path
