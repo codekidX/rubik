@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"reflect"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -105,8 +106,12 @@ func FromStorage(fileName string) ([]byte, error) {
 	return b, err
 }
 
+func GetConfig() interface{} {
+	return app.Config
+}
+
 func Load(config interface{}) error {
-	env := os.Getenv("CHERRY_ENV")
+	env := os.Getenv("SKETCH_ENV")
 	pwd, _ := os.Getwd()
 	var configPath string
 	if env != "" {
@@ -116,7 +121,7 @@ func Load(config interface{}) error {
 	}
 
 	_, err := toml.DecodeFile(configPath, config)
-	app.Config = config
+	app.Config = reflect.ValueOf(config).Elem().Interface()
 
 	if err != nil {
 		return err
@@ -164,11 +169,7 @@ func Emit(event string) error {
 }
 
 // Listen ...
-func Listen(args ...string) error {
-	// if c.Config.GenerateDocs {
-	// TODO: write code to genereate /sdk/tools/swagger.json route
-	// }
-
+func Run(args ...string) error {
 	err := boot()
 
 	if err != nil {
@@ -187,17 +188,17 @@ func Listen(args ...string) error {
 			port = portVal
 		}
 
-		i.CherryMsg("Started on port: " + port[1:])
+		i.SketchMsg("Sketch app started on port " + port[1:])
 		return http.ListenAndServe(port, app.mux)
 	} else if app.Config == nil && len(args) == 0 {
 		port = ":8000"
-		i.CherryMsg("Started on port: " + port[1:])
+		i.SketchMsg("Sketch app started on port " + port[1:])
 		return http.ListenAndServe(port, app.mux)
 	} else {
 		port = ":8000"
 	}
 
-	i.CherryMsg("Started on port: " + args[0][1:])
+	i.SketchMsg("Sketch app started on port " + args[0][1:])
 	return http.ListenAndServe(args[0], app.mux)
 }
 
