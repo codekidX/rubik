@@ -8,9 +8,9 @@ import (
 
 var t = tint.Init()
 
-func CherryMsg(message string) {
-	template := "@([) 🍒 @(]) " + message
-	fmt.Println(t.Exp(template, tint.Green.Bold(), tint.Green.Bold()))
+func SketchMsg(message string) {
+	template := "\n\n ✏️  " + message
+	fmt.Println(template)
 }
 
 func DebugMsg(message string) {

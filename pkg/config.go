@@ -109,21 +109,21 @@ type Config struct {
 // GetCherryConfigPath returns path of cherry config of current project
 func GetCherryConfigPath() string {
 	dir, _ := os.Getwd()
-	return dir + string(os.PathSeparator) + "cherry.toml"
+	return dir + string(os.PathSeparator) + "sketch.toml"
 }
 
 // GetCherryConfig returns cherry config
 func GetCherryConfig() *Config {
 	configPath := GetCherryConfigPath()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		DebugMsg("Did not find cherry.toml. Booting server without one.")
+		DebugMsg("Did not find sketch.toml. Booting server without one.")
 		return &Config{}
 	}
 
 	var config Config
 	_, err := toml.DecodeFile(configPath, &config)
 	if err != nil {
-		WarnMsg("cherry.toml was found but could not parse it. Error: " + err.Error())
+		WarnMsg("sketch.toml was found but could not parse it. Error: " + err.Error())
 		return &Config{}
 	}
 	return &config
