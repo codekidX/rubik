@@ -15,7 +15,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	pkg "github.com/oksketch/sketch/pkg"
+	"github.com/oksketch/sketch/pkg"
 )
 
 // App is a singleton instance of cherry server
@@ -347,6 +347,6 @@ func (ro *Router) StorageRoutes(fileNames ...string) {
 
 // Load checks for config.toml and loads all the environment variables
 func checkForConfig() {
-	app.Config = pkg.GetCherryConfig()
+	app.Config = pkg.GetSketchConfig()
 	pkg.DebugMsg("Loaded Config successfully")
 }

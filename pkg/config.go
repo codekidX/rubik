@@ -50,7 +50,7 @@ func (nm NotationMap) Get(accessor string) (interface{}, error) {
 
 // Set value of a accessor using dot notations from NotationMap
 func (nm NotationMap) Set(accessor string, value interface{}) error {
-	var fields = []string{}
+	var fields []string
 
 	if strings.Contains(accessor, ".") {
 		fields = strings.Split(accessor, ".")
@@ -106,15 +106,15 @@ type Config struct {
 	App         []Project `toml:"app"`
 }
 
-// GetCherryConfigPath returns path of cherry config of current project
-func GetCherryConfigPath() string {
+// GetSketchConfigPath returns path of cherry config of current project
+func GetSketchConfigPath() string {
 	dir, _ := os.Getwd()
 	return dir + string(os.PathSeparator) + "sketch.toml"
 }
 
-// GetCherryConfig returns cherry config
-func GetCherryConfig() *Config {
-	configPath := GetCherryConfigPath()
+// GetSketchConfig returns cherry config
+func GetSketchConfig() *Config {
+	configPath := GetSketchConfigPath()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		DebugMsg("Did not find sketch.toml. Booting server without one.")
 		return &Config{}
