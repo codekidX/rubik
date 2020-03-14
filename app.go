@@ -125,22 +125,25 @@ func Load(config interface{}) error {
 	env := os.Getenv("SKETCH_ENV")
 	pwd, _ := os.Getwd()
 	defaultConfigPath := pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "default.toml"
-	envConfigNotFound := false
+	envConfigNotFound := true
 
 	if env != "" {
 		envConfigPath = pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + env + ".toml"
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
-			envConfigNotFound = true
+			envConfigNotFound = false
+			fmt.Println("setting config not found")
 		}
 	}
-	var err error
-
 	if envConfigNotFound {
-		_, err = toml.DecodeFile(defaultConfigPath, config)
+		_, err := toml.DecodeFile(defaultConfigPath, config)
 		_, err = toml.DecodeFile(defaultConfigPath, &app.intermConfig)
+
+		if err != nil {
+			return err
+		}
 	} else {
 		// now we need to override env config values with the default values
-		_, err = toml.DecodeFile(defaultConfigPath, &defaultMap)
+		_, err := toml.DecodeFile(defaultConfigPath, &defaultMap)
 		_, err = toml.DecodeFile(envConfigPath, &envMap)
 
 		if err != nil {
@@ -150,16 +153,12 @@ func Load(config interface{}) error {
 		fmt.Println(finalMap)
 		var buf bytes.Buffer
 		enc := toml.NewEncoder(bufio.NewWriter(&buf))
-		err := enc.Encode(&finalMap)
+		err = enc.Encode(&finalMap)
 		if err != nil {
 			return err
 		}
 		err = toml.Unmarshal(buf.Bytes(), config)
 		app.intermConfig = finalMap
-	}
-
-	if err != nil {
-		return err
 	}
 
 	app.Config = reflect.ValueOf(config).Elem().Interface()
