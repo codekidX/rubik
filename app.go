@@ -121,6 +121,11 @@ func Load(config interface{}) error {
 	}
 
 	_, err := toml.DecodeFile(configPath, config)
+
+	configKind := reflect.ValueOf(config).Kind()
+	if configKind != reflect.Ptr {
+		return errors.New("You need to pass a pointer type to the Load() method found: " + configKind.String())
+	}
 	app.Config = reflect.ValueOf(config).Elem().Interface()
 
 	if err != nil {
@@ -253,7 +258,11 @@ func boot() error {
 						if err.Error() != "" {
 							writer.Header().Set("Content-Type", "application/json")
 							writer.WriteHeader(500)
-							b, _ := json.Marshal(err.Error())
+							e := restError{
+								Code:    500,
+								Message: err.Error(),
+							}
+							b, _ := json.Marshal(e)
 							_, _ = writer.Write(b)
 							return
 						}
