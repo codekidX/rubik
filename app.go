@@ -135,6 +135,13 @@ func Load(config interface{}) error {
 		}
 	}
 	if envConfigNotFound {
+		// if no config files are there inside the config directory we cannot load
+		// any config inside the sketch app. so we don't have to error the user
+		// giving them the freedom to use sketch without the core feature
+		if _, err := os.Stat(defaultConfigPath); os.IsNotExist(err) {
+			return nil
+		}
+
 		_, err := toml.DecodeFile(defaultConfigPath, config)
 		_, err = toml.DecodeFile(defaultConfigPath, &app.intermConfig)
 
