@@ -128,3 +128,10 @@ func GetCherryConfig() *Config {
 	}
 	return &config
 }
+
+func OverrideValues(source, env map[string]interface{}) map[string]interface{} {
+	for k, v := range env {
+		source[k] = v
+	}
+	return source
+}

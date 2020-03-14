@@ -1,8 +1,11 @@
 package sketch
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -12,7 +15,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	i "github.com/oksketch/sketch/pkg"
+	pkg "github.com/oksketch/sketch/pkg"
 )
 
 // App is a singleton instance of cherry server
@@ -45,7 +48,7 @@ type Middleware func(req Request, next NextFunc)
 // Cherry is the instance of Server which holds all the necessary information of apis
 type Sketch struct {
 	Config       interface{}
-	intermConfig i.NotationMap
+	intermConfig pkg.NotationMap
 	mux          *httprouter.Router
 	routers      []Router
 	routeInfo    []RouteInfo
@@ -111,27 +114,55 @@ func GetConfig() interface{} {
 }
 
 func Load(config interface{}) error {
-	env := os.Getenv("SKETCH_ENV")
-	pwd, _ := os.Getwd()
-	var configPath string
-	if env != "" {
-		configPath = pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + env + ".toml"
-	} else {
-		configPath = pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "default.toml"
-	}
-
-	_, err := toml.DecodeFile(configPath, config)
-
 	configKind := reflect.ValueOf(config).Kind()
 	if configKind != reflect.Ptr {
 		return errors.New("You need to pass a pointer type to the Load() method found: " + configKind.String())
 	}
-	app.Config = reflect.ValueOf(config).Elem().Interface()
+
+	var defaultMap map[string]interface{}
+	var envMap map[string]interface{}
+	var envConfigPath string
+	env := os.Getenv("SKETCH_ENV")
+	pwd, _ := os.Getwd()
+	defaultConfigPath := pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "default.toml"
+	envConfigNotFound := false
+
+	if env != "" {
+		envConfigPath = pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + env + ".toml"
+		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
+			envConfigNotFound = true
+		}
+	}
+	var err error
+
+	if envConfigNotFound {
+		_, err = toml.DecodeFile(defaultConfigPath, config)
+		_, err = toml.DecodeFile(defaultConfigPath, &app.intermConfig)
+	} else {
+		// now we need to override env config values with the default values
+		_, err = toml.DecodeFile(defaultConfigPath, &defaultMap)
+		_, err = toml.DecodeFile(envConfigPath, &envMap)
+
+		if err != nil {
+			return err
+		}
+		finalMap := pkg.OverrideValues(defaultMap, envMap)
+		fmt.Println(finalMap)
+		var buf bytes.Buffer
+		enc := toml.NewEncoder(bufio.NewWriter(&buf))
+		err := enc.Encode(&finalMap)
+		if err != nil {
+			return err
+		}
+		err = toml.Unmarshal(buf.Bytes(), config)
+		app.intermConfig = finalMap
+	}
 
 	if err != nil {
 		return err
 	}
-	_, err = toml.DecodeFile(configPath, &app.intermConfig)
+
+	app.Config = reflect.ValueOf(config).Elem().Interface()
 
 	return nil
 }
@@ -193,17 +224,17 @@ func Run(args ...string) error {
 			port = portVal
 		}
 
-		i.SketchMsg("Sketch app started on port " + port[1:])
+		pkg.SketchMsg("Sketch app started on port " + port[1:])
 		return http.ListenAndServe(port, app.mux)
 	} else if app.Config == nil && len(args) == 0 {
 		port = ":8000"
-		i.SketchMsg("Sketch app started on port " + port[1:])
+		pkg.SketchMsg("Sketch app started on port " + port[1:])
 		return http.ListenAndServe(port, app.mux)
 	} else {
 		port = ":8000"
 	}
 
-	i.SketchMsg("Sketch app started on port " + args[0][1:])
+	pkg.SketchMsg("Sketch app started on port " + args[0][1:])
 	return http.ListenAndServe(args[0], app.mux)
 }
 
@@ -221,12 +252,12 @@ func boot() error {
 
 			finalPath := safeRouterPath(router.basePath) + safeRoutePath(route.Path)
 
-			i.DebugMsg("Booting => " + finalPath)
+			pkg.DebugMsg("Booting => " + finalPath)
 
 			if route.Entity != nil {
 				validEntity := checkIsEntity(route.Entity)
 				if !validEntity {
-					i.ErrorMsg("Your Entity must extend cherry.RequestEntity struct")
+					pkg.ErrorMsg("Your Entity must extend cherry.RequestEntity struct")
 					errored = true
 					continue
 				}
@@ -284,7 +315,7 @@ func boot() error {
 					//}
 				})
 			} else {
-				i.WarnMsg("ROUTE_NOT_BOOTED - There is no controller assigned for route: " + finalPath)
+				pkg.WarnMsg("ROUTE_NOT_BOOTED - There is no controller assigned for route: " + finalPath)
 			}
 		}
 	}
@@ -316,6 +347,6 @@ func (ro *Router) StorageRoutes(fileNames ...string) {
 
 // Load checks for config.toml and loads all the environment variables
 func checkForConfig() {
-	app.Config = i.GetCherryConfig()
-	i.DebugMsg("Loaded Config successfully")
+	app.Config = pkg.GetCherryConfig()
+	pkg.DebugMsg("Loaded Config successfully")
 }
