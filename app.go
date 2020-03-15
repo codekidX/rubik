@@ -24,8 +24,10 @@ var app = &Rubik{
 	routers: []Router{},
 }
 
+// EmitterFunc defines an anonymous func
 type EmitterFunc func()
 
+// NextFunc defines the next middleware function in a series of middleware
 type NextFunc func(response interface{})
 
 type restError struct {
@@ -37,15 +39,17 @@ func (re restError) Error() string {
 	return re.Message
 }
 
+// Plugin lets you plug middlewares, guards and routes from different modules
 type Plugin struct {
 	Method  string
 	Pattern string
 	Handler httprouter.Handle
 }
 
+// Middleware intercepts user request and processes it
 type Middleware func(req Request, next NextFunc)
 
-// Cherry is the instance of Server which holds all the necessary information of apis
+// Rubik is the instance of Server which holds all the necessary information of apis
 type Rubik struct {
 	Config       interface{}
 	intermConfig pkg.NotationMap
@@ -61,14 +65,9 @@ type Request struct {
 	rubik      *Rubik
 }
 
+// GetRouteInfo returns a list of loaded routes in rubik
 func (req Request) GetRouteInfo() []RouteInfo {
 	return req.rubik.routeInfo
-}
-
-type Router struct {
-	basePath   string
-	routes     []Route
-	Middleware []Middleware
 }
 
 // Route is the culmination of
@@ -93,6 +92,7 @@ type RouteInfo struct {
 	Responses   map[int]string
 }
 
+// FromStorage returns the file bytes of a given fileName as response
 func FromStorage(fileName string) ([]byte, error) {
 	pwd, _ := os.Getwd()
 	var filePath = pwd + string(os.PathSeparator) + "storage" + string(os.PathSeparator) + fileName
@@ -109,10 +109,12 @@ func FromStorage(fileName string) ([]byte, error) {
 	return b, err
 }
 
+// GetConfig returns the injected config from the Load method
 func GetConfig() interface{} {
 	return app.Config
 }
 
+// Load method loads the config/RUBIK_ENV.toml file into the interface given
 func Load(config interface{}) error {
 	configKind := reflect.ValueOf(config).Kind()
 	if configKind != reflect.Ptr {
@@ -190,7 +192,7 @@ func Plug(plugin Plugin) {
 	app.mux.Handle(plugin.Method, plugin.Pattern, plugin.Handler)
 }
 
-// PlugFunc ...
+// PlugAfter ...
 func PlugAfter(plugin Plugin) {
 	app.mux.Handle(plugin.Method, plugin.Pattern, plugin.Handler)
 }
@@ -210,7 +212,7 @@ func Emit(event string) error {
 	return nil
 }
 
-// Listen ...
+// Run ...
 func Run(args ...string) error {
 	err := boot()
 
@@ -244,6 +246,7 @@ func Run(args ...string) error {
 	return http.ListenAndServe(args[0], app.mux)
 }
 
+// RestError returns a json with the error code and the message
 func RestError(code int, message string) restError {
 	return restError{Code: code, Message: message}
 }
@@ -330,25 +333,6 @@ func boot() error {
 		return errors.New("encountered following errors while running cherry boot sequence")
 	}
 	return nil
-}
-
-// Add injects a cherry.Route definition to the main http server instance
-func (ro *Router) Add(r Route) {
-	ro.routes = append(ro.routes, r)
-}
-
-// StorageRoutes create routes inside router that links your storage/fileName to the Router base path
-func (ro *Router) StorageRoutes(fileNames ...string) {
-	for _, file := range fileNames {
-		r := Route{
-			Method: "GET",
-			Path:   safeRoutePath(file),
-			Controller: func(entity interface{}) (interface{}, error) {
-				return FromStorage(file)
-			},
-		}
-		ro.routes = append(ro.routes, r)
-	}
 }
 
 // Load checks for config.toml and loads all the environment variables

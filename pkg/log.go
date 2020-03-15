@@ -9,7 +9,7 @@ import (
 var t = tint.Init()
 
 func RubikMsg(message string) {
-	template := "\n\n ✏️  " + message
+	template := "\n\n 💠  " + message
 	fmt.Println(template)
 }
 
