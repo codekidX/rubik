@@ -1,4 +1,4 @@
-package sketch
+package rubik
 
 import (
 	"bufio"
@@ -15,11 +15,11 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/oksketch/sketch/pkg"
+	"github.com/rubikorg/rubik/pkg"
 )
 
 // App is a singleton instance of cherry server
-var app = &Sketch{
+var app = &Rubik{
 	mux:     httprouter.New(),
 	routers: []Router{},
 }
@@ -46,7 +46,7 @@ type Plugin struct {
 type Middleware func(req Request, next NextFunc)
 
 // Cherry is the instance of Server which holds all the necessary information of apis
-type Sketch struct {
+type Rubik struct {
 	Config       interface{}
 	intermConfig pkg.NotationMap
 	mux          *httprouter.Router
@@ -58,11 +58,11 @@ type Sketch struct {
 // Request ...
 type Request struct {
 	RawRequest *http.Request
-	sketch     *Sketch
+	rubik      *Rubik
 }
 
 func (req Request) GetRouteInfo() []RouteInfo {
-	return req.sketch.routeInfo
+	return req.rubik.routeInfo
 }
 
 type Router struct {
@@ -122,7 +122,7 @@ func Load(config interface{}) error {
 	var defaultMap map[string]interface{}
 	var envMap map[string]interface{}
 	var envConfigPath string
-	env := os.Getenv("SKETCH_ENV")
+	env := os.Getenv("RUBIK_ENV")
 	pwd, _ := os.Getwd()
 	defaultConfigPath := pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "default.toml"
 	envConfigNotFound := true
@@ -136,8 +136,8 @@ func Load(config interface{}) error {
 	}
 	if envConfigNotFound {
 		// if no config files are there inside the config directory we cannot load
-		// any config inside the sketch app. so we don't have to error the user
-		// giving them the freedom to use sketch without the core feature
+		// any config inside the rubik app. so we don't have to error the user
+		// giving them the freedom to use rubik without the core feature
 		if _, err := os.Stat(defaultConfigPath); os.IsNotExist(err) {
 			return nil
 		}
@@ -230,17 +230,17 @@ func Run(args ...string) error {
 			port = portVal
 		}
 
-		pkg.SketchMsg("Sketch app started on port " + port[1:])
+		pkg.RubikMsg("Rubik app started on port " + port[1:])
 		return http.ListenAndServe(port, app.mux)
 	} else if app.Config == nil && len(args) == 0 {
 		port = ":8000"
-		pkg.SketchMsg("Sketch app started on port " + port[1:])
+		pkg.RubikMsg("Rubik app started on port " + port[1:])
 		return http.ListenAndServe(port, app.mux)
 	} else {
 		port = ":8000"
 	}
 
-	pkg.SketchMsg("Sketch app started on port " + args[0][1:])
+	pkg.RubikMsg("Rubik app started on port " + args[0][1:])
 	return http.ListenAndServe(args[0], app.mux)
 }
 
@@ -353,6 +353,6 @@ func (ro *Router) StorageRoutes(fileNames ...string) {
 
 // Load checks for config.toml and loads all the environment variables
 func checkForConfig() {
-	app.Config = pkg.GetSketchConfig()
+	app.Config = pkg.GetRubikConfig()
 	pkg.DebugMsg("Loaded Config successfully")
 }

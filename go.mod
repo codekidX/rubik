@@ -1,4 +1,4 @@
-module github.com/oksketch/sketch
+module github.com/rubikorg/rubik
 
 go 1.12
 

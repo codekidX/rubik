@@ -106,24 +106,24 @@ type Config struct {
 	App         []Project `toml:"app"`
 }
 
-// GetSketchConfigPath returns path of cherry config of current project
-func GetSketchConfigPath() string {
+// GetRubikConfigPath returns path of rubik config of current project
+func GetRubikConfigPath() string {
 	dir, _ := os.Getwd()
-	return dir + string(os.PathSeparator) + "sketch.toml"
+	return dir + string(os.PathSeparator) + "rubik.toml"
 }
 
-// GetSketchConfig returns cherry config
-func GetSketchConfig() *Config {
-	configPath := GetSketchConfigPath()
+// GetRubikConfig returns cherry config
+func GetRubikConfig() *Config {
+	configPath := GetRubikConfigPath()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		DebugMsg("Did not find sketch.toml. Booting server without one.")
+		DebugMsg("Did not find rubik.toml. Booting server without one.")
 		return &Config{}
 	}
 
 	var config Config
 	_, err := toml.DecodeFile(configPath, &config)
 	if err != nil {
-		WarnMsg("sketch.toml was found but could not parse it. Error: " + err.Error())
+		WarnMsg("rubik.toml was found but could not parse it. Error: " + err.Error())
 		return &Config{}
 	}
 	return &config

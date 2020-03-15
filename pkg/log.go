@@ -8,7 +8,7 @@ import (
 
 var t = tint.Init()
 
-func SketchMsg(message string) {
+func RubikMsg(message string) {
 	template := "\n\n ✏️  " + message
 	fmt.Println(template)
 }

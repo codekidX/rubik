@@ -1,4 +1,4 @@
-package sketch
+package rubik
 
 // ValidationEntity ...
 type ValidationEntity interface {

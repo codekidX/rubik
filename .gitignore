@@ -21,7 +21,7 @@
 # vs code
 .vscode/
 
-# files and folders related to sketch testing to ignore
+# files and folders related to rubik testing to ignore
 storage/
 config/
 mycherry.go

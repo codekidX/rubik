@@ -1,4 +1,4 @@
-package sketch
+package rubik
 
 import (
 	"fmt"
