@@ -124,12 +124,13 @@ func (c *Client) Delete(entity interface{}) (Response, error) {
 func (c *Client) Download(entity DownloadRequestEntity) error {
 
 	if entity.route == "" {
-		return errors.New("DownloadRequestEntity must have a route initialized using Route() method")
+		errMsg := "DownloadRequestEntity must have a route initialized using Route() method"
+		return errors.New(errMsg)
 	}
 
 	// source
-	finalUrl := c.url + safeRoutePath(entity.route)
-	err := downloadCall(finalUrl, entity.TargetFilePath)
+	finalURL := c.url + safeRoutePath(entity.route)
+	err := downloadCall(finalURL, entity.TargetFilePath)
 
 	if err != nil {
 		return err
@@ -196,7 +197,10 @@ func call(req *Payload) (Response, error) {
 		err = json.Unmarshal(body, req.responseType)
 
 		if err != nil {
-			message := fmt.Sprintf("InkInferenceError: Cannot infer a non-json/non-mappable value to specified type: %s. Response.ParsedBody/Response.StringBody of type map is present for access.", responseType.Name())
+			errMsg := "InkInferenceError: Cannot infer a non-json/non-mappable value to " +
+				"specified type: %s. Response.ParsedBody/Response.StringBody of type map is " +
+				"present for access."
+			message := fmt.Sprintf(errMsg, responseType.Name())
 			return Response{
 				Status:     resp.StatusCode,
 				IsJSON:     false,

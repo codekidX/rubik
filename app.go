@@ -95,7 +95,8 @@ type RouteInfo struct {
 // FromStorage returns the file bytes of a given fileName as response
 func FromStorage(fileName string) ([]byte, error) {
 	pwd, _ := os.Getwd()
-	var filePath = pwd + string(os.PathSeparator) + "storage" + string(os.PathSeparator) + fileName
+	var filePath = pwd + string(os.PathSeparator) + "storage" +
+		string(os.PathSeparator) + fileName
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, errors.New("file does not exist")
@@ -126,11 +127,14 @@ func Load(config interface{}) error {
 	var envConfigPath string
 	env := os.Getenv("RUBIK_ENV")
 	pwd, _ := os.Getwd()
-	defaultConfigPath := pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "default.toml"
+	defaultConfigPath := pwd + string(os.PathSeparator) + "config" +
+		string(os.PathSeparator) + "default.toml"
 	envConfigNotFound := true
 
 	if env != "" {
-		envConfigPath = pwd + string(os.PathSeparator) + "config" + string(os.PathSeparator) + env + ".toml"
+		envConfigPath = pwd + string(os.PathSeparator) + "config" +
+			string(os.PathSeparator) + env + ".toml"
+
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
 			envConfigNotFound = false
 			fmt.Println("setting config not found")
@@ -206,7 +210,8 @@ func AddEmitter(event string, efunc EmitterFunc) {
 func Emit(event string) error {
 	eFunc := app.emitters[event]
 	if eFunc == nil {
-		return errors.New("Emitter with event: " + event + " is not registered. Call AddEmitter() to add an emitter function to cherry server.")
+		return errors.New("Emitter with event: " + event +
+			" is not registered. Call AddEmitter() to add an emitter function to cherry server.")
 	}
 	eFunc()
 	return nil
@@ -273,56 +278,57 @@ func boot() error {
 			}
 
 			if route.Controller != nil {
-				app.mux.GET(finalPath, func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-					// TODO: parse entity and then pass to the controller -- NOT LIKE THIS !!
-					var en interface{}
-					if route.Entity == nil {
-						en = BlankRequestEntity{}
-					} else {
-						en = route.Entity
-					}
-					resp, err := route.Controller(en)
-					re, ok := err.(restError)
-
-					// error handling
-					if err != nil {
-						if ok {
-							writer.Header().Set("Content-Type", "application/json")
-							writer.WriteHeader(re.Code)
-							b, _ := json.Marshal(err)
-							_, _ = writer.Write(b)
-							return
+				app.mux.GET(finalPath,
+					func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+						// TODO: parse entity and then pass to the controller -- NOT LIKE THIS !!
+						var en interface{}
+						if route.Entity == nil {
+							en = BlankRequestEntity{}
+						} else {
+							en = route.Entity
 						}
+						resp, err := route.Controller(en)
+						re, ok := err.(restError)
 
-						// we now make sure that it is not a normal error without a code
-						if err.Error() != "" {
-							writer.Header().Set("Content-Type", "application/json")
-							writer.WriteHeader(500)
-							e := restError{
-								Code:    500,
-								Message: err.Error(),
+						// error handling
+						if err != nil {
+							if ok {
+								writer.Header().Set("Content-Type", "application/json")
+								writer.WriteHeader(re.Code)
+								b, _ := json.Marshal(err)
+								_, _ = writer.Write(b)
+								return
 							}
-							b, _ := json.Marshal(e)
-							_, _ = writer.Write(b)
+
+							// we now make sure that it is not a normal error without a code
+							if err.Error() != "" {
+								writer.Header().Set("Content-Type", "application/json")
+								writer.WriteHeader(500)
+								e := restError{
+									Code:    500,
+									Message: err.Error(),
+								}
+								b, _ := json.Marshal(e)
+								_, _ = writer.Write(b)
+								return
+							}
+						}
+
+						a, ok := resp.(string)
+						if ok {
+							_, _ = writer.Write([]byte(a))
 							return
 						}
-					}
 
-					a, ok := resp.(string)
-					if ok {
-						_, _ = writer.Write([]byte(a))
-						return
-					}
-
-					b, ok := resp.([]byte)
-					if ok {
-						_, _ = writer.Write(b)
-					}
-					//validReq := route.Validate()
-					//if validReq {
-					//
-					//}
-				})
+						b, ok := resp.([]byte)
+						if ok {
+							_, _ = writer.Write(b)
+						}
+						//validReq := route.Validate()
+						//if validReq {
+						//
+						//}
+					})
 			} else {
 				pkg.WarnMsg("ROUTE_NOT_BOOTED - There is no controller assigned for route: " + finalPath)
 			}
