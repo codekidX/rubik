@@ -33,7 +33,8 @@ var Type = struct {
 	Text templateType
 }{1, 2, 3}
 
-// Render mehtod renders
+// Render returns a mixin holding the data to be rendered on the web page or
+// sent over the wire
 func Render(path string, vars interface{}, ttype templateType) (RenderMixin, error) {
 	// check for path of template folder
 	templDir := pkg.GetTemplateFolderPath()

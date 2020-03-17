@@ -31,14 +31,14 @@ type EmitterFunc func()
 // NextFunc defines the next middleware function in a series of middleware
 type NextFunc func(response interface{})
 
-// RestError type is used by rubik to show error in a same format
-type RestError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+// RestErrorMixin type is used by rubik to show error in a same format
+type RestErrorMixin struct {
+	code    int
+	message string
 }
 
-func (re RestError) Error() string {
-	return re.Message
+func (re RestErrorMixin) Error() string {
+	return re.message
 }
 
 // Plugin lets you plug middlewares, guards and routes from different modules
@@ -261,13 +261,7 @@ func Run(args ...string) error {
 	return http.ListenAndServe(args[0], app.mux)
 }
 
-// Error returns a json with the error code and the message
-func Error(code int, message string) RestError {
-	return RestError{Code: code, Message: message}
-}
-
-// Load checks for config.toml and loads all the environment variables
-func checkForConfig() {
-	app.rootConfig = pkg.GetRubikConfig()
-	app.logger.CanLog = app.rootConfig.Log
+// RestError returns a json with the error code and the message
+func RestError(code int, message string) RestErrorMixin {
+	return RestErrorMixin{code: code, message: message}
 }

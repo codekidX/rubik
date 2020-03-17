@@ -41,13 +41,13 @@ func boot() error {
 							en = route.Entity
 						}
 						resp, err := route.Controller(en)
-						re, ok := err.(RestError)
+						re, ok := err.(RestErrorMixin)
 
 						// error handling
 						if err != nil {
 							if ok {
 								writer.Header().Set("Content-Type", "application/json")
-								writer.WriteHeader(re.Code)
+								writer.WriteHeader(re.code)
 								b, _ := json.Marshal(err)
 								_, _ = writer.Write(b)
 								return
@@ -57,10 +57,7 @@ func boot() error {
 							if err.Error() != "" {
 								writer.Header().Set("Content-Type", "application/json")
 								writer.WriteHeader(500)
-								e := RestError{
-									Code:    500,
-									Message: err.Error(),
-								}
+								e := RestErrorMixin{500, err.Error()}
 								b, _ := json.Marshal(e)
 								_, _ = writer.Write(b)
 								return
