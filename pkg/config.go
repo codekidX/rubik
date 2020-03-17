@@ -107,6 +107,12 @@ type Config struct {
 	App         []Project `toml:"app"`
 }
 
+// GetTemplateFolderPath returns the absolute template dir path
+func GetTemplateFolderPath() string {
+	dir, _ := os.Getwd()
+	return dir + string(os.PathSeparator) + "templates"
+}
+
 // GetRubikConfigPath returns path of rubik config of current project
 func GetRubikConfigPath() string {
 	dir, _ := os.Getwd()
