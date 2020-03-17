@@ -1,9 +1,26 @@
 package pkg
 
 import (
+	"fmt"
+	"os"
 	"testing"
 )
 
+func TestGetTemplateFolderPath(t *testing.T) {
+	path := GetTemplateFolderPath()
+	pwd, _ := os.Getwd()
+	if path != fmt.Sprintf("%s%s%s", pwd, string(os.PathSeparator), "templates") {
+		t.Error("GetTemplateFolderPath: wrong path returned from this method, path:", path)
+	}
+}
+
+func TestGetRubikConfigPath(t *testing.T) {
+	path := GetRubikConfigPath()
+	pwd, _ := os.Getwd()
+	if path != fmt.Sprintf("%s%s%s", pwd, string(os.PathSeparator), "rubik.toml") {
+		t.Error("GetRubikConfigPath: wrong path returned from this method, path:", path)
+	}
+}
 func TestOverrideValues(t *testing.T) {
 	source := map[string]interface{}{
 		"a": 1,

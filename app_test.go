@@ -11,6 +11,11 @@ func TestLoad(t *testing.T) {
 	if err != nil {
 		t.Error("Load() is throwing an error even when it didn't find default.toml")
 	}
+
+	err = Load(someMap)
+	if err == nil {
+		t.Error("Load() did not throw an error when you passed a value type")
+	}
 }
 
 func TestCreate(t *testing.T) {
@@ -29,9 +34,29 @@ func TestCreate(t *testing.T) {
 		t.Error("Router has wrong base path in it. Value: " + tRouter.basePath)
 	}
 }
+
+func TestUse(t *testing.T) {
+	r := Create("/")
+	Use(r)
+	if len(app.routers) <= 0 {
+		t.Error("Use() did not append a router to the routes slice of app")
+	}
+}
+
 func TestFromStorage(t *testing.T) {
 	_, err := FromStorage("noSuchFile")
 	if err == nil {
 		t.Error("FromStorage() did not throw an error when it did not find the file")
+	}
+}
+
+func TestRestError(t *testing.T) {
+	err := RestError(400, "something")
+	if reflect.ValueOf(err).Type() != reflect.ValueOf(RestErrorMixin{}).Type() {
+		t.Error("RestError() did not return a RestErrorMixin")
+	}
+
+	if err.code != 400 || err.message != "something" {
+		t.Error("RestError() does not contain proper data:", err)
 	}
 }
