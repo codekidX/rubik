@@ -101,8 +101,9 @@ type Project struct {
 
 // Config is the main config for your cherry server
 type Config struct {
-	ProjectName string    `toml:"name"`
-	IsFlat      bool      `toml:"flat"`
+	ProjectName string `toml:"name"`
+	IsFlat      bool   `toml:"flat"`
+	Log         bool
 	App         []Project `toml:"app"`
 }
 
@@ -129,6 +130,7 @@ func GetRubikConfig() *Config {
 	return &config
 }
 
+// OverrideValues writes over the source map with env map
 func OverrideValues(source, env map[string]interface{}) map[string]interface{} {
 	for k, v := range env {
 		source[k] = v

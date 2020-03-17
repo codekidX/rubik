@@ -1,9 +1,7 @@
 package rubik
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -22,6 +20,9 @@ import (
 var app = &Rubik{
 	mux:     httprouter.New(),
 	routers: []Router{},
+	logger: &pkg.Logger{
+		CanLog: true,
+	},
 }
 
 // EmitterFunc defines an anonymous func
@@ -30,12 +31,13 @@ type EmitterFunc func()
 // NextFunc defines the next middleware function in a series of middleware
 type NextFunc func(response interface{})
 
-type restError struct {
+// RestError type is used by rubik to show error in a same format
+type RestError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
-func (re restError) Error() string {
+func (re RestError) Error() string {
 	return re.Message
 }
 
@@ -53,6 +55,8 @@ type Middleware func(req Request, next NextFunc)
 type Rubik struct {
 	Config       interface{}
 	intermConfig pkg.NotationMap
+	rootConfig   *pkg.Config
+	logger       *pkg.Logger
 	mux          *httprouter.Router
 	routers      []Router
 	routeInfo    []RouteInfo
@@ -118,13 +122,16 @@ func GetConfig() interface{} {
 // Load method loads the config/RUBIK_ENV.toml file into the interface given
 func Load(config interface{}) error {
 	configKind := reflect.ValueOf(config).Kind()
+
 	if configKind != reflect.Ptr {
-		return errors.New("You need to pass a pointer type to the Load() method found: " + configKind.String())
+		return errors.New("You need to pass a pointer type to the Load() method found: " +
+			configKind.String())
 	}
 
 	var defaultMap map[string]interface{}
 	var envMap map[string]interface{}
 	var envConfigPath string
+
 	env := os.Getenv("RUBIK_ENV")
 	pwd, _ := os.Getwd()
 	defaultConfigPath := pwd + string(os.PathSeparator) + "config" +
@@ -140,6 +147,7 @@ func Load(config interface{}) error {
 			fmt.Println("setting config not found")
 		}
 	}
+
 	if envConfigNotFound {
 		// if no config files are there inside the config directory we cannot load
 		// any config inside the rubik app. so we don't have to error the user
@@ -162,14 +170,16 @@ func Load(config interface{}) error {
 		if err != nil {
 			return err
 		}
+
 		finalMap := pkg.OverrideValues(defaultMap, envMap)
-		fmt.Println(finalMap)
 		var buf bytes.Buffer
-		enc := toml.NewEncoder(bufio.NewWriter(&buf))
+		enc := toml.NewEncoder(&buf)
 		err = enc.Encode(&finalMap)
+
 		if err != nil {
 			return err
 		}
+
 		err = toml.Unmarshal(buf.Bytes(), config)
 		app.intermConfig = finalMap
 	}
@@ -237,112 +247,27 @@ func Run(args ...string) error {
 			port = portVal
 		}
 
-		pkg.RubikMsg("Rubik app started on port " + port[1:])
+		pkg.RubikMsg("Rubik server started on port " + port[1:])
 		return http.ListenAndServe(port, app.mux)
 	} else if app.Config == nil && len(args) == 0 {
 		port = ":8000"
-		pkg.RubikMsg("Rubik app started on port " + port[1:])
+		pkg.RubikMsg("Rubik server started on port " + port[1:])
 		return http.ListenAndServe(port, app.mux)
 	} else {
 		port = ":8000"
 	}
 
-	pkg.RubikMsg("Rubik app started on port " + args[0][1:])
+	pkg.RubikMsg("Rubik server started on port " + args[0][1:])
 	return http.ListenAndServe(args[0], app.mux)
 }
 
-// RestError returns a json with the error code and the message
-func RestError(code int, message string) restError {
-	return restError{Code: code, Message: message}
-}
-
-func boot() error {
-	//c.checkForConfig()
-	var errored bool
-	// write the boot sequence of the server
-	for _, router := range app.routers {
-		for index := 0; index < len(router.routes); index++ {
-			route := router.routes[index]
-
-			finalPath := safeRouterPath(router.basePath) + safeRoutePath(route.Path)
-
-			pkg.DebugMsg("Booting => " + finalPath)
-
-			if route.Entity != nil {
-				validEntity := checkIsEntity(route.Entity)
-				if !validEntity {
-					pkg.ErrorMsg("Your Entity must extend cherry.RequestEntity struct")
-					errored = true
-					continue
-				}
-			}
-
-			if route.Controller != nil {
-				app.mux.GET(finalPath,
-					func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-						// TODO: parse entity and then pass to the controller -- NOT LIKE THIS !!
-						var en interface{}
-						if route.Entity == nil {
-							en = BlankRequestEntity{}
-						} else {
-							en = route.Entity
-						}
-						resp, err := route.Controller(en)
-						re, ok := err.(restError)
-
-						// error handling
-						if err != nil {
-							if ok {
-								writer.Header().Set("Content-Type", "application/json")
-								writer.WriteHeader(re.Code)
-								b, _ := json.Marshal(err)
-								_, _ = writer.Write(b)
-								return
-							}
-
-							// we now make sure that it is not a normal error without a code
-							if err.Error() != "" {
-								writer.Header().Set("Content-Type", "application/json")
-								writer.WriteHeader(500)
-								e := restError{
-									Code:    500,
-									Message: err.Error(),
-								}
-								b, _ := json.Marshal(e)
-								_, _ = writer.Write(b)
-								return
-							}
-						}
-
-						a, ok := resp.(string)
-						if ok {
-							_, _ = writer.Write([]byte(a))
-							return
-						}
-
-						b, ok := resp.([]byte)
-						if ok {
-							_, _ = writer.Write(b)
-						}
-						//validReq := route.Validate()
-						//if validReq {
-						//
-						//}
-					})
-			} else {
-				pkg.WarnMsg("ROUTE_NOT_BOOTED - There is no controller assigned for route: " + finalPath)
-			}
-		}
-	}
-
-	if errored {
-		return errors.New("encountered following errors while running cherry boot sequence")
-	}
-	return nil
+// Error returns a json with the error code and the message
+func Error(code int, message string) RestError {
+	return RestError{Code: code, Message: message}
 }
 
 // Load checks for config.toml and loads all the environment variables
 func checkForConfig() {
-	app.Config = pkg.GetRubikConfig()
-	pkg.DebugMsg("Loaded Config successfully")
+	app.rootConfig = pkg.GetRubikConfig()
+	app.logger.CanLog = app.rootConfig.Log
 }

@@ -82,40 +82,40 @@ func NewClient(baseURL string, timeout time.Duration) *Client {
 // Get ...
 func (c *Client) Get(entity interface{}) (Response, error) {
 	req, err := populateRequest(entity, c)
-	req.requestType = GET
 	if err != nil {
 		return Response{}, err
 	}
+	req.requestType = GET
 	return call(req)
 }
 
 // Post ...
 func (c *Client) Post(entity interface{}) (Response, error) {
 	req, err := populateRequest(entity, c)
-	req.requestType = POST
 	if err != nil {
 		return Response{}, err
 	}
+	req.requestType = POST
 	return call(req)
 }
 
 // Put ...
 func (c *Client) Put(entity interface{}) (Response, error) {
 	req, err := populateRequest(entity, c)
-	req.requestType = PUT
 	if err != nil {
 		return Response{}, err
 	}
+	req.requestType = PUT
 	return call(req)
 }
 
 // Delete ...
 func (c *Client) Delete(entity interface{}) (Response, error) {
 	req, err := populateRequest(entity, c)
-	req.requestType = DELETE
 	if err != nil {
 		return Response{}, err
 	}
+	req.requestType = DELETE
 	return call(req)
 }
 
