@@ -57,7 +57,6 @@ func Render(path string, vars interface{}, ttype templateType) (RenderMixin, err
 		break
 	}
 
-	// check if the vars given by calling Parse function has some error
 	return RenderMixin{contentType: contentType, content: content}, err
 }
 
@@ -72,6 +71,7 @@ func parseTextTemplate(path, templName string, data interface{}) ([]byte, error)
 		return nil, err
 	}
 
+	// check if the vars given by calling Parse function has some error
 	var buf bytes.Buffer
 	err = t.Execute(&buf, data)
 
