@@ -2,10 +2,11 @@ package rubik
 
 import (
 	"bytes"
-	"errors"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	html "html/template"
 	text "text/template"
@@ -61,10 +62,45 @@ func Render(path string, vars interface{}, ttype templateType) (RenderMixin, err
 	return RenderMixin{contentType: contentType, content: content}, err
 }
 
+// ParseDir returns a map of parsed template with key as file name and value as the
+// content of the template of the given directory inside templates/ folder
+//
+// NOTE: this is not to be used as a controller response, this method only encapsulates
+// logic around ParseFiles and makes it easy for developers to handle custom
+// implementations
+func ParseDir(dirName string, vars interface{}, ttype templateType) (map[string]string, error) {
+	var result map[string]string
+	folder := pkg.GetTemplateFolderPath() + string(os.PathSeparator) + dirName
+	files, err := ioutil.ReadDir(folder)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	for _, f := range files {
+		filePath := folder + string(os.PathSeparator) + f.Name()
+		if ttype == Type.Text || ttype == Type.JSON {
+			b, err := parseTextTemplate(filePath, f.Name(), vars)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			result[f.Name()] = string(b)
+		} else {
+			b, err := parseHTMLTemplate(filePath, f.Name(), vars)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			result[f.Name()] = string(b)
+		}
+
+	}
+
+	return result, nil
+}
+
 func parseTextTemplate(path, templName string, data interface{}) ([]byte, error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	t, err := text.New(templName).Parse(string(b))
