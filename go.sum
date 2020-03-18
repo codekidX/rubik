@@ -4,5 +4,7 @@ github.com/julienschmidt/httprouter v1.3.0 h1:U0609e9tgbseu3rBINet9P48AI/D3oJs4d
 github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
 github.com/okcherry/cherry v0.0.0-20200309140857-24cc6a703e68 h1:bfvyEA87TbNIAKWyyy4Se4y21oISs1CJ9JMWXnent/o=
 github.com/okcherry/cherry v0.0.0-20200309140857-24cc6a703e68/go.mod h1:984F6InJoYoO7RKVb6rjbnSw4Pg8GchbYCv35GL4v54=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/printzero/tint v0.0.3 h1:9dXvyS3Bl8GB2Y4HCAgythU1I233aD19WWb8SOPYAj8=
 github.com/printzero/tint v0.0.3/go.mod h1:/CwPg1futUCwDVK10x6pVUDBn/k4+e+MbdVPqzZtSes=

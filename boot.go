@@ -2,10 +2,11 @@ package rubik
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
 	"github.com/rubikorg/rubik/pkg"
 )
 
@@ -47,7 +48,7 @@ func boot() error {
 						if err != nil {
 							if ok {
 								writer.Header().Set("Content-Type", "application/json")
-								writer.WriteHeader(re.code)
+								writer.WriteHeader(re.Code)
 								b, _ := json.Marshal(err)
 								_, _ = writer.Write(b)
 								return
@@ -55,11 +56,17 @@ func boot() error {
 
 							// we now make sure that it is not a normal error without a code
 							if err.Error() != "" {
-								writer.Header().Set("Content-Type", "application/json")
 								writer.WriteHeader(500)
-								e := RestErrorMixin{500, err.Error()}
-								b, _ := json.Marshal(e)
-								_, _ = writer.Write(b)
+								serr, ok := err.(tracer)
+								var msg = err.Error()
+								if ok {
+									// msg = fmt.Sprintf("%v ", serr.StackTrace())
+									for _, f := range serr.StackTrace() {
+										msg += fmt.Sprintf("%+s:%d\n", f, f)
+									}
+								}
+
+								_, _ = writer.Write([]byte(msg))
 								return
 							}
 						}
@@ -88,13 +95,13 @@ func boot() error {
 						//}
 					})
 			} else {
-				pkg.WarnMsg("ROUTE_NOT_BOOTED - There is no controller assigned for route: " + finalPath)
+				pkg.WarnMsg("ROUTE_NOT_BOOTED: No controller assigned for route: " + finalPath)
 			}
 		}
 	}
 
 	if errored {
-		return errors.New("encountered following errors while running cherry boot sequence")
+		return errors.New("BootError: error while running rubik boot sequence")
 	}
 	return nil
 }
