@@ -56,7 +56,7 @@ func TestRestError(t *testing.T) {
 		t.Error("RestError() did not return a RestErrorMixin")
 	}
 
-	if err.code != 400 || err.message != "something" {
+	if err.Code != 400 || err.Message != "something" {
 		t.Error("RestError() does not contain proper data:", err)
 	}
 }
