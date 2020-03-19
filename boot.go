@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
@@ -63,7 +64,7 @@ func boot() error {
 								if ok {
 									// msg = fmt.Sprintf("%v ", serr.StackTrace())
 									for _, f := range serr.StackTrace() {
-										msg += fmt.Sprintf("%+s:%d\n", f, f)
+										msg += "\n" + fmt.Sprintf("%+s:%d\n", f, f)
 									}
 								}
 
