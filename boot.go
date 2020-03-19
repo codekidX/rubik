@@ -11,6 +11,7 @@ import (
 )
 
 func boot() error {
+	bootStatic()
 	//c.checkForConfig()
 	var errored bool
 	// write the boot sequence of the server
@@ -104,6 +105,13 @@ func boot() error {
 		return errors.New("BootError: error while running rubik boot sequence")
 	}
 	return nil
+}
+
+func bootStatic() {
+	if _, err := os.Stat(pkg.GetStaticFolderPath()); err == nil {
+		app.mux.ServeFiles("/static/*filepath", http.Dir("./static"))
+		pkg.DebugMsg("Booting => /static")
+	}
 }
 
 func bootGuard() {}
