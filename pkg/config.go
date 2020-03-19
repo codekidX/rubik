@@ -113,6 +113,12 @@ func GetTemplateFolderPath() string {
 	return dir + string(os.PathSeparator) + "templates"
 }
 
+// GetStaticFolderPath returns the absolute static dir path
+func GetStaticFolderPath() string {
+	dir, _ := os.Getwd()
+	return dir + string(os.PathSeparator) + "static"
+}
+
 // GetRubikConfigPath returns path of rubik config of current project
 func GetRubikConfigPath() string {
 	dir, _ := os.Getwd()

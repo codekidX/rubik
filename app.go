@@ -2,12 +2,13 @@ package rubik
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"reflect"
+
+	"github.com/pkg/errors"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -17,7 +18,7 @@ import (
 )
 
 // App is a singleton instance of cherry server
-var app = &Rubik{
+var app = &rubik{
 	mux:     httprouter.New(),
 	routers: []Router{},
 	logger: &pkg.Logger{
@@ -25,20 +26,24 @@ var app = &Rubik{
 	},
 }
 
+// Session is a manager for managing rubik server sessions
+var Session SessionManager
+
 // EmitterFunc defines an anonymous func
 type EmitterFunc func()
 
-// NextFunc defines the next middleware function in a series of middleware
-type NextFunc func(response interface{})
+type tracer interface {
+	StackTrace() errors.StackTrace
+}
 
 // RestErrorMixin type is used by rubik to show error in a same format
 type RestErrorMixin struct {
-	code    int
-	message string
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
 func (re RestErrorMixin) Error() string {
-	return re.message
+	return re.Message
 }
 
 // Plugin lets you plug middlewares, guards and routes from different modules
@@ -49,11 +54,11 @@ type Plugin struct {
 }
 
 // Middleware intercepts user request and processes it
-type Middleware func(req Request, next NextFunc)
+type Middleware func(req Request) interface{}
 
 // Rubik is the instance of Server which holds all the necessary information of apis
-type Rubik struct {
-	Config       interface{}
+type rubik struct {
+	config       interface{}
 	intermConfig pkg.NotationMap
 	rootConfig   *pkg.Config
 	logger       *pkg.Logger
@@ -65,13 +70,29 @@ type Rubik struct {
 
 // Request ...
 type Request struct {
-	RawRequest *http.Request
-	rubik      *Rubik
+	Raw            *http.Request
+	Params         httprouter.Params
+	ResponseHeader Values
+	Session        SessionManager
+	app            *rubik
+	entity         interface{}
 }
 
 // GetRouteInfo returns a list of loaded routes in rubik
 func (req Request) GetRouteInfo() []RouteInfo {
-	return req.rubik.routeInfo
+	return req.app.routeInfo
+}
+
+// Config returns the configuration of your server  for a specific accessor
+func (req Request) Config(accessor string) interface{} {
+	val, err := req.app.intermConfig.Get(accessor)
+	if err != nil {
+		msg := fmt.Sprintf("MiddlewareAccessorError: cannot access %s from project config",
+			accessor)
+		pkg.ErrorMsg(msg)
+		return nil
+	}
+	return val
 }
 
 // Route is the culmination of
@@ -103,7 +124,7 @@ func FromStorage(fileName string) ([]byte, error) {
 		string(os.PathSeparator) + fileName
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, errors.New("file does not exist")
+		return nil, errors.New("FileNotFoundError: " + fileName + " does not exist.")
 	}
 
 	b, err := ioutil.ReadFile(filePath)
@@ -116,7 +137,7 @@ func FromStorage(fileName string) ([]byte, error) {
 
 // GetConfig returns the injected config from the Load method
 func GetConfig() interface{} {
-	return app.Config
+	return app.config
 }
 
 // Load method loads the config/RUBIK_ENV.toml file into the interface given
@@ -124,8 +145,9 @@ func Load(config interface{}) error {
 	configKind := reflect.ValueOf(config).Kind()
 
 	if configKind != reflect.Ptr {
-		return errors.New("You need to pass a pointer type to the Load() method found: " +
+		msg := fmt.Sprintf("NonPointerValueError: Load() method requires pointer variable: %s",
 			configKind.String())
+		return errors.New(msg)
 	}
 
 	var defaultMap map[string]interface{}
@@ -144,7 +166,9 @@ func Load(config interface{}) error {
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
 			envConfigNotFound = false
-			fmt.Println("setting config not found")
+			// do this with logger
+			msg := fmt.Sprintf("ConfigNotFound: config file %s.toml does not exist", env)
+			pkg.DebugMsg(msg)
 		}
 	}
 
@@ -160,31 +184,29 @@ func Load(config interface{}) error {
 		_, err = toml.DecodeFile(defaultConfigPath, &app.intermConfig)
 
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	} else {
 		// now we need to override env config values with the default values
 		_, err := toml.DecodeFile(defaultConfigPath, &defaultMap)
 		_, err = toml.DecodeFile(envConfigPath, &envMap)
-
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		finalMap := pkg.OverrideValues(defaultMap, envMap)
 		var buf bytes.Buffer
 		enc := toml.NewEncoder(&buf)
 		err = enc.Encode(&finalMap)
-
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		err = toml.Unmarshal(buf.Bytes(), config)
 		app.intermConfig = finalMap
 	}
 
-	app.Config = reflect.ValueOf(config).Elem().Interface()
+	app.config = reflect.ValueOf(config).Elem().Interface()
 
 	return nil
 }
@@ -212,22 +234,22 @@ func PlugAfter(plugin Plugin) {
 }
 
 // AddEmitter ...
-func AddEmitter(event string, efunc EmitterFunc) {
-	app.emitters[event] = efunc
-}
+// func AddEmitter(event string, efunc EmitterFunc) {
+// 	app.emitters[event] = efunc
+// }
 
 // Emit ...
-func Emit(event string) error {
-	eFunc := app.emitters[event]
-	if eFunc == nil {
-		return errors.New("Emitter with event: " + event +
-			" is not registered. Call AddEmitter() to add an emitter function to cherry server.")
-	}
-	eFunc()
-	return nil
-}
+// func Emit(event string) error {
+// 	eFunc := app.emitters[event]
+// 	if eFunc == nil {
+// 		return errors.New("Emitter with event: " + event +
+// 			" is not registered. Call AddEmitter() to add an emitter function to cherry server.")
+// 	}
+// 	eFunc()
+// 	return nil
+// }
 
-// Run ...
+// Run rubik server instance
 func Run(args ...string) error {
 	err := boot()
 
@@ -236,32 +258,30 @@ func Run(args ...string) error {
 	}
 
 	var port string
-	if app.Config != nil {
+	if app.config != nil {
 		// load port from environ
 		val, err := app.intermConfig.Get("port")
 		portVal, ok := val.(string)
-
 		if err != nil || !ok {
 			port = ":8000"
 		} else {
 			port = portVal
 		}
 
-		pkg.RubikMsg("Rubik server started on port " + port[1:])
-		return http.ListenAndServe(port, app.mux)
-	} else if app.Config == nil && len(args) == 0 {
-		port = ":8000"
-		pkg.RubikMsg("Rubik server started on port " + port[1:])
-		return http.ListenAndServe(port, app.mux)
-	} else {
+	} else if app.config == nil && len(args) == 0 {
 		port = ":8000"
 	}
 
-	pkg.RubikMsg("Rubik server started on port " + args[0][1:])
-	return http.ListenAndServe(args[0], app.mux)
+	if port == "" && len(args) > 0 {
+		port = args[0]
+	}
+
+	pkg.RubikMsg("Rubik server started on port " + port[1:])
+
+	return http.ListenAndServe(port, app.mux)
 }
 
 // RestError returns a json with the error code and the message
 func RestError(code int, message string) RestErrorMixin {
-	return RestErrorMixin{code: code, message: message}
+	return RestErrorMixin{Code: code, Message: message}
 }
