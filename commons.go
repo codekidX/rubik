@@ -15,7 +15,7 @@ import (
 
 const (
 	// ClientAgent is the user agent header
-	ClientAgent = "cherry-http-client/1.1"
+	ClientAgent = "rubik-http-client/1.1"
 	// HeaderUserAgent supplies user-agent key
 	HeaderUserAgent = "User-Agent"
 )
@@ -34,7 +34,7 @@ func extractFromType(a interface{}) (Payload, error) {
 
 	for i := 0; i < num; i++ {
 		field := fields.Field(i)
-		tag := field.Tag.Get("ink")
+		tag := field.Tag.Get("rubik")
 		value := values.Field(i)
 
 		// Get route value from RequestEntity

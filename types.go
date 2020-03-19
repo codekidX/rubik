@@ -2,12 +2,17 @@ package rubik
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 )
 
-// Handler ...
-type Handler struct {
-	Entity RequestEntity
+// SessionManager is an interface contract that rubik.Session uses
+//
+// Anything abiding by this contract can
+type SessionManager interface {
+	Get(string) string
+	Set(string, string) error
+	Delete(string) bool
 }
 
 // RequestEntity holds the data for a single API call
@@ -16,11 +21,12 @@ type RequestEntity struct {
 	entityType string
 	route      string
 	Params     []string
-	request    *Payload
+	request    *http.Request
 	FormData   bool
 	URLEncoded bool
 	JSON       bool
 	Infer      interface{}
+	Cookies    Values
 }
 
 // Route ...

@@ -2,6 +2,7 @@ package rubik
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -41,7 +42,8 @@ func Render(path string, vars interface{}, ttype templateType) (RenderMixin, err
 	templDir := pkg.GetTemplateFolderPath()
 	templPath := templDir + string(os.PathSeparator) + strings.TrimPrefix(path, "/")
 	if _, err := os.Stat(templPath); os.IsNotExist(err) {
-		return RenderMixin{}, errors.New("templates directory not found")
+		msg := fmt.Sprintf("FileNotFoundError: path %s does not exist", templPath)
+		return RenderMixin{}, errors.New(msg)
 	}
 
 	// check which templating to use html or text
