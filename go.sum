@@ -8,3 +8,5 @@ github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/printzero/tint v0.0.3 h1:9dXvyS3Bl8GB2Y4HCAgythU1I233aD19WWb8SOPYAj8=
 github.com/printzero/tint v0.0.3/go.mod h1:/CwPg1futUCwDVK10x6pVUDBn/k4+e+MbdVPqzZtSes=
+github.com/rubikorg/blocks v0.0.0-20200320142242-f0eb666c9c44 h1:cb6sLEWEHVspnAP1mbMfLc0eqwNhiRB2iyxw8TLmJI4=
+github.com/rubikorg/blocks v0.0.0-20200320142242-f0eb666c9c44/go.mod h1:69qJ18WGHys0jL96nZjLiL3vLWq9e7tzuGAVQzCjQQQ=

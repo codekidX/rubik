@@ -14,6 +14,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/rubikorg/blocks/ds"
 	"github.com/rubikorg/rubik/pkg"
 )
 
@@ -59,7 +60,7 @@ type Middleware func(req Request) interface{}
 // Rubik is the instance of Server which holds all the necessary information of apis
 type rubik struct {
 	config       interface{}
-	intermConfig pkg.NotationMap
+	intermConfig ds.NotationMap
 	rootConfig   *pkg.Config
 	logger       *pkg.Logger
 	mux          *httprouter.Router
@@ -85,8 +86,8 @@ func (req Request) GetRouteInfo() []RouteInfo {
 
 // Config returns the configuration of your server  for a specific accessor
 func (req Request) Config(accessor string) interface{} {
-	val, err := req.app.intermConfig.Get(accessor)
-	if err != nil {
+	val := req.app.intermConfig.Get(accessor)
+	if val == nil {
 		msg := fmt.Sprintf("MiddlewareAccessorError: cannot access %s from project config",
 			accessor)
 		pkg.ErrorMsg(msg)
@@ -172,6 +173,8 @@ func Load(config interface{}) error {
 		}
 	}
 
+	app.intermConfig = ds.NewNotationMap()
+
 	if envConfigNotFound {
 		// if no config files are there inside the config directory we cannot load
 		// any config inside the rubik app. so we don't have to error the user
@@ -181,11 +184,14 @@ func Load(config interface{}) error {
 		}
 
 		_, err := toml.DecodeFile(defaultConfigPath, config)
-		_, err = toml.DecodeFile(defaultConfigPath, &app.intermConfig)
-
+		// you can use envMap here since there is no env found and that assignment
+		// is not going anywhere until this scope ends we make use of the resources
+		_, err = toml.DecodeFile(defaultConfigPath, &envMap)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+
+		app.intermConfig.Assign(envMap)
 	} else {
 		// now we need to override env config values with the default values
 		_, err := toml.DecodeFile(defaultConfigPath, &defaultMap)
@@ -203,10 +209,18 @@ func Load(config interface{}) error {
 		}
 
 		err = toml.Unmarshal(buf.Bytes(), config)
-		app.intermConfig = finalMap
+		app.intermConfig.Assign(finalMap)
+	}
+
+	// irrespective of env found or not flatten the intermconfig
+	if app.intermConfig.Length() > 0 {
+		app.intermConfig.Flatten()
 	}
 
 	app.config = reflect.ValueOf(config).Elem().Interface()
+
+	// before loading anything to interm config mark notation map as not editable
+	app.intermConfig.IsEditable(false)
 
 	return nil
 }
@@ -260,9 +274,9 @@ func Run(args ...string) error {
 	var port string
 	if app.config != nil {
 		// load port from environ
-		val, err := app.intermConfig.Get("port")
+		val := app.intermConfig.Get("port")
 		portVal, ok := val.(string)
-		if err != nil || !ok {
+		if val == nil || !ok {
 			port = ":8000"
 		} else {
 			port = portVal

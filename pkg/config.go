@@ -2,96 +2,9 @@ package pkg
 
 import (
 	"os"
-	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/BurntSushi/toml"
 )
-
-// NotationMap is a type of map structure that can get you the value of a
-// embedded key inside a map
-type NotationMap map[string]interface{}
-
-// Get values of key using dot notations from NotationMap
-func (nm NotationMap) Get(accessor string) (interface{}, error) {
-	var fields = []string{}
-
-	if strings.Contains(accessor, ".") {
-		fields = strings.Split(accessor, ".")
-	} else {
-		fields = append(fields, accessor)
-	}
-
-	// then we have entered the arena of dot notations
-	if len(fields) > 1 {
-		var finalValue interface{}
-		for _, f := range fields {
-			if finalValue == nil {
-				if nm[f] == nil {
-					return nil, noSuchKeyErr(f, accessor)
-				}
-				finalValue = nm[f]
-			} else {
-				interm, ok := finalValue.(map[string]interface{})
-				if !ok {
-					return nil, noSuchKeyErr(f, accessor)
-				}
-				if interm[f] == nil {
-					return nil, noSuchKeyErr(f, accessor)
-				}
-				finalValue = interm[f]
-			}
-		}
-		return finalValue, nil
-	}
-
-	return nm[accessor], nil
-}
-
-// Set value of a accessor using dot notations from NotationMap
-func (nm NotationMap) Set(accessor string, value interface{}) error {
-	var fields []string
-
-	if strings.Contains(accessor, ".") {
-		fields = strings.Split(accessor, ".")
-	} else {
-		fields = append(fields, accessor)
-	}
-
-	// then we have entered the arena of dot notations
-	if len(fields) > 1 {
-		var finalValue interface{}
-		for i, f := range fields {
-			if finalValue == nil {
-				if nm[f] == nil {
-					return noSuchKeyErr(f, accessor)
-				}
-
-				// then this is the last key that we need to traverse to
-				if i == len(fields) {
-					nm[f] = value
-				}
-			} else {
-				interm, ok := finalValue.(map[string]interface{})
-				if !ok {
-					return noSuchKeyErr(f, accessor)
-				}
-				if interm[f] == nil {
-					return noSuchKeyErr(f, accessor)
-				}
-				interm[f] = value
-			}
-		}
-		return nil
-	}
-
-	return nil
-}
-
-func noSuchKeyErr(key, acc string) error {
-	return errors.New("no such key: " + key + " for notation: " + acc)
-}
 
 // Project defines the struct representation of rubik.toml
 type Project struct {
