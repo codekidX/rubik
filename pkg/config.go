@@ -1,9 +1,10 @@
 package pkg
 
 import (
-	"errors"
 	"os"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/BurntSushi/toml"
 )
@@ -92,6 +93,7 @@ func noSuchKeyErr(key, acc string) error {
 	return errors.New("no such key: " + key + " for notation: " + acc)
 }
 
+// Project defines the struct representation of rubik.toml
 type Project struct {
 	Name         string `toml:"name"`
 	Path         string `toml:"path"`
