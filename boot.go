@@ -8,11 +8,18 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
+	"github.com/printzero/tint"
 	"github.com/rubikorg/rubik/pkg"
 )
 
 func boot() error {
+	err := bootBlocks()
+	if err != nil {
+		return err
+	}
+
 	bootStatic()
+
 	//c.checkForConfig()
 	var errored bool
 	// write the boot sequence of the server
@@ -96,6 +103,21 @@ func boot() error {
 	return nil
 }
 
+func bootBlocks() error {
+	if len(app.blocks) > 0 {
+		for k, v := range app.blocks {
+			err := v.OnAttach(&App{app: *app, BlockName: k})
+			if err != nil {
+				return err
+			}
+			msg := fmt.Sprintf("=[ @(%s) ]= block attached", k)
+			msg = tint.Init().Exp(msg, tint.Cyan.Bold())
+			fmt.Println(msg)
+		}
+	}
+	return nil
+}
+
 func bootStatic() {
 	if _, err := os.Stat(pkg.GetStaticFolderPath()); err == nil {
 		app.mux.ServeFiles("/static/*filepath", http.Dir("./static"))
@@ -132,7 +154,7 @@ func handleErrorResponse(err error, writer http.ResponseWriter) {
 			stt.Stack = stack
 		}
 
-		b, err := parseHTMLTemplate("/Users/codekid/error.html", "errorTpl", stt)
+		b, err := parseHTMLTemplate(pkg.GetErrorHTMLPath(), "errorTpl", stt)
 		if err != nil {
 			writer.Write([]byte(err.Error()))
 			return

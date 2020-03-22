@@ -57,6 +57,12 @@ func GetRubikConfig() *Config {
 	return &config
 }
 
+// GetErrorHTMLPath ...
+func GetErrorHTMLPath() string {
+	// TODO: change this to proper .rubik/error.html after cli is done
+	return "/Users/codekid/error.html"
+}
+
 // OverrideValues writes over the source map with env map
 func OverrideValues(source, env map[string]interface{}) map[string]interface{} {
 	for k, v := range env {

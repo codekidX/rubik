@@ -25,8 +25,10 @@ var app = &rubik{
 	logger: &pkg.Logger{
 		CanLog: true,
 	},
+	blocks: make(map[string]Block),
 }
 
+var blocks = make(map[string]interface{})
 // Session is a manager for managing rubik server sessions
 var Session SessionManager
 
@@ -68,11 +70,12 @@ type rubik struct {
 	intermConfig ds.NotationMap
 	rootConfig   *pkg.Config
 	logger       *pkg.Logger
-	mux          *httprouter.Router
-	routers      []Router
-	routeInfo    []RouteInfo
 	emitters     map[string]EmitterFunc
 	currentEnv   string
+	mux          *httprouter.Router
+	blocks       map[string]Block
+	routers      []Router
+	routeInfo    []RouteInfo
 }
 
 // Request ...
@@ -147,6 +150,21 @@ func GetConfig() interface{} {
 	return app.config
 }
 
+// Attach a block to rubik tree
+func Attach(symbol string, b Block) {
+	if app.blocks[symbol] != nil {
+		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists", symbol, symbol)
+		pkg.ErrorMsg(msg)
+		return
+	}
+	app.blocks[symbol] = b
+}
+
+// GetBlock returns the block that is attached to rubik represented by the
+// symbol supplied as the parameter
+func GetBlock(symbol string) Block {
+	return app.blocks[symbol]
+}
 // Load method loads the config/RUBIK_ENV.toml file into the interface given
 func Load(config interface{}) error {
 	configKind := reflect.ValueOf(config).Kind()
@@ -168,17 +186,18 @@ func Load(config interface{}) error {
 	pwd, _ := os.Getwd()
 	defaultConfigPath := pwd + string(os.PathSeparator) + "config" +
 		string(os.PathSeparator) + "default.toml"
-	envConfigFound := true
+	envConfigFound := false
 
 	if env != "" {
 		envConfigPath = pwd + string(os.PathSeparator) + "config" +
 			string(os.PathSeparator) + env + ".toml"
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
-			envConfigFound = false
 			// do this with logger
 			msg := fmt.Sprintf("ConfigNotFound: config file %s.toml does not exist", env)
 			pkg.DebugMsg(msg)
+		} else {
+			envConfigFound = true
 		}
 	}
 
