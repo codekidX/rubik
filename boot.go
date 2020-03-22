@@ -12,7 +12,31 @@ import (
 	"github.com/rubikorg/rubik/pkg"
 )
 
+// NotFoundHandler is rubik's not found route renderer
+type NotFoundHandler struct{}
+
+func (nfh NotFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	stt := StackTraceTemplate{
+		Msg: "Route " + r.URL.Path + " not found",
+	}
+
+	var b []byte
+	b, err := parseHTMLTemplate(pkg.GetErrorHTMLPath(), "errortmpl", stt)
+	if err != nil {
+		serr, _ := err.(tracer)
+		for _, f := range serr.StackTrace() {
+			stt.Stack = append(stt.Stack, fmt.Sprintf("%+s:%d\n", f, f))
+		}
+		b, _ = parseHTMLTemplate(pkg.GetErrorHTMLPath(), "errortmpl", stt)
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(404)
+	w.Write(b)
+}
+
 func boot() error {
+	handle404Response()
 	err := bootBlocks()
 	if err != nil {
 		return err
@@ -130,6 +154,12 @@ func bootGuard() {}
 func bootMiddlewares() {}
 
 func bootController() {}
+
+func handle404Response() {
+	if app.handle404 == nil {
+		app.mux.NotFound = NotFoundHandler{}
+	}
+}
 
 func handleResponse(response interface{}) {}
 

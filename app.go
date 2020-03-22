@@ -291,6 +291,11 @@ func PlugAfter(plugin Plugin) {
 // 	return nil
 // }
 
+// SetNotFoundHandler sets custom handler for 404
+func SetNotFoundHandler(h http.Handler) {
+	app.mux.NotFound = h
+}
+
 // Run rubik server instance
 func Run(args ...string) error {
 	err := boot()
