@@ -57,20 +57,8 @@ func boot() error {
 							}
 
 							// we now make sure that it is not a normal error without a code
-							if err.Error() != "" {
-								writer.WriteHeader(500)
-								serr, ok := err.(tracer)
-								var msg = err.Error()
-								if ok {
-									// msg = fmt.Sprintf("%v ", serr.StackTrace())
-									for _, f := range serr.StackTrace() {
-										msg += "\n" + fmt.Sprintf("%+s:%d\n", f, f)
-									}
-								}
-
-								_, _ = writer.Write([]byte(msg))
-								return
-							}
+							handleErrorResponse(err, writer)
+							return
 						}
 
 						c, ok := resp.(RenderMixin)
@@ -123,4 +111,35 @@ func bootController() {}
 
 func handleResponse(response interface{}) {}
 
-func handleErrorResponse(response interface{}) {}
+func handleErrorResponse(err error, writer http.ResponseWriter) {
+	isDevEnv := true
+	if !(app.currentEnv == "" || app.currentEnv == "development") {
+		isDevEnv = false
+	}
+
+	writer.WriteHeader(500)
+	if err.Error() != "" && isDevEnv {
+		serr, ok := err.(tracer)
+		var msg = err.Error()
+		var stack []string
+		var stt = StackTraceTemplate{
+			Msg: msg,
+		}
+		if ok {
+			for _, f := range serr.StackTrace() {
+				stack = append(stack, fmt.Sprintf("%+s:%d\n", f, f))
+			}
+			stt.Stack = stack
+		}
+
+		b, err := parseHTMLTemplate("/Users/codekid/error.html", "errorTpl", stt)
+		if err != nil {
+			writer.Write([]byte(err.Error()))
+			return
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		writer.Write(b)
+		return
+	}
+	writer.Write([]byte(err.Error()))
+}

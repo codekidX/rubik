@@ -18,7 +18,7 @@ import (
 	"github.com/rubikorg/rubik/pkg"
 )
 
-// App is a singleton instance of cherry server
+// App is a singleton instance of rubik server
 var app = &rubik{
 	mux:     httprouter.New(),
 	routers: []Router{},
@@ -29,6 +29,11 @@ var app = &rubik{
 
 // Session is a manager for managing rubik server sessions
 var Session SessionManager
+
+const (
+	// Version of rubik
+	Version = "v0.1"
+)
 
 // EmitterFunc defines an anonymous func
 type EmitterFunc func()
@@ -67,6 +72,7 @@ type rubik struct {
 	routers      []Router
 	routeInfo    []RouteInfo
 	emitters     map[string]EmitterFunc
+	currentEnv   string
 }
 
 // Request ...
@@ -156,17 +162,20 @@ func Load(config interface{}) error {
 	var envConfigPath string
 
 	env := os.Getenv("RUBIK_ENV")
+	// set the current env to app.currentEnv
+	app.currentEnv = env
+
 	pwd, _ := os.Getwd()
 	defaultConfigPath := pwd + string(os.PathSeparator) + "config" +
 		string(os.PathSeparator) + "default.toml"
-	envConfigNotFound := true
+	envConfigFound := true
 
 	if env != "" {
 		envConfigPath = pwd + string(os.PathSeparator) + "config" +
 			string(os.PathSeparator) + env + ".toml"
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
-			envConfigNotFound = false
+			envConfigFound = false
 			// do this with logger
 			msg := fmt.Sprintf("ConfigNotFound: config file %s.toml does not exist", env)
 			pkg.DebugMsg(msg)
@@ -175,7 +184,7 @@ func Load(config interface{}) error {
 
 	app.intermConfig = ds.NewNotationMap()
 
-	if envConfigNotFound {
+	if !envConfigFound {
 		// if no config files are there inside the config directory we cannot load
 		// any config inside the rubik app. so we don't have to error the user
 		// giving them the freedom to use rubik without the core feature

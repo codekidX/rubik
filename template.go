@@ -15,6 +15,15 @@ import (
 	"github.com/rubikorg/rubik/pkg"
 )
 
+type TemplateStruct struct {
+	Static string
+}
+
+type StackTraceTemplate struct {
+	Msg   string
+	Stack []string
+}
+
 // RenderMixin is a mixin holding values for rendering a template
 type RenderMixin struct {
 	content     []byte
@@ -107,29 +116,29 @@ func parseTextTemplate(path, templName string, data interface{}) ([]byte, error)
 
 	t, err := text.New(templName).Parse(string(b))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// check if the vars given by calling Parse function has some error
 	var buf bytes.Buffer
 	err = t.Execute(&buf, data)
 
-	return buf.Bytes(), err
+	return buf.Bytes(), errors.WithStack(err)
 }
 
 func parseHTMLTemplate(path, templName string, data interface{}) ([]byte, error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	t, err := html.New(templName).Parse(string(b))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	var buf bytes.Buffer
 	err = t.Execute(&buf, data)
 
-	return buf.Bytes(), err
+	return buf.Bytes(), errors.WithStack(err)
 }
