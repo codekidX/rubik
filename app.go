@@ -29,6 +29,9 @@ var app = &rubik{
 }
 
 var blocks = make(map[string]interface{})
+var beforeHooks []RequestHook
+var afterHooks []RequestHook
+
 // Session is a manager for managing rubik server sessions
 var Session SessionManager
 
@@ -64,6 +67,17 @@ type Plugin struct {
 // Middleware intercepts user request and processes it
 type Middleware func(req Request) interface{}
 
+// RequestContext ...
+type RequestContext struct {
+	Request  *http.Request
+	Ctx      map[string]interface{}
+	Response interface{}
+	Status   int
+}
+
+// RequestHook ...
+type RequestHook func(RequestContext)
+
 // Rubik is the instance of Server which holds all the necessary information of apis
 type rubik struct {
 	config       interface{}
@@ -76,6 +90,7 @@ type rubik struct {
 	blocks       map[string]Block
 	routers      []Router
 	routeInfo    []RouteInfo
+	handle404    http.Handler
 }
 
 // Request ...
@@ -165,6 +180,17 @@ func Attach(symbol string, b Block) {
 func GetBlock(symbol string) Block {
 	return app.blocks[symbol]
 }
+
+// BeforeRequest ...
+func BeforeRequest(h RequestHook) {
+	beforeHooks = append(beforeHooks, h)
+}
+
+// AfterRequest ...
+func AfterRequest(h RequestHook) {
+	afterHooks = append(afterHooks, h)
+}
+
 // Load method loads the config/RUBIK_ENV.toml file into the interface given
 func Load(config interface{}) error {
 	configKind := reflect.ValueOf(config).Kind()

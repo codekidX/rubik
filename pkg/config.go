@@ -22,22 +22,24 @@ type Config struct {
 	App         []Project `toml:"app"`
 }
 
+var sep = string(os.PathSeparator)
+
 // GetTemplateFolderPath returns the absolute template dir path
 func GetTemplateFolderPath() string {
 	dir, _ := os.Getwd()
-	return dir + string(os.PathSeparator) + "templates"
+	return dir + sep + "templates"
 }
 
 // GetStaticFolderPath returns the absolute static dir path
 func GetStaticFolderPath() string {
 	dir, _ := os.Getwd()
-	return dir + string(os.PathSeparator) + "static"
+	return dir + sep + "static"
 }
 
 // GetRubikConfigPath returns path of rubik config of current project
 func GetRubikConfigPath() string {
 	dir, _ := os.Getwd()
-	return dir + string(os.PathSeparator) + "rubik.toml"
+	return dir + sep + "rubik.toml"
 }
 
 // GetRubikConfig returns cherry config
@@ -57,10 +59,19 @@ func GetRubikConfig() *Config {
 	return &config
 }
 
+// MakeAndGetCacheDirPath returns rubik's cache dir
+func MakeAndGetCacheDirPath() string {
+	pwd, _ := os.UserHomeDir()
+	path := pwd + sep + ".rubik"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		os.MkdirAll(path, os.ModeDir)
+	}
+	return path
+}
+
 // GetErrorHTMLPath ...
 func GetErrorHTMLPath() string {
-	// TODO: change this to proper .rubik/error.html after cli is done
-	return "/Users/codekid/error.html"
+	return MakeAndGetCacheDirPath() + sep + "error.html"
 }
 
 // OverrideValues writes over the source map with env map

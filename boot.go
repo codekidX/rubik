@@ -67,6 +67,24 @@ func boot() error {
 			if route.Controller != nil {
 				app.mux.GET(finalPath,
 					func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+						reqCtx := RequestContext{
+							Request: req,
+							Ctx:     make(map[string]interface{}),
+						}
+
+						go dispatchHooks(beforeHooks, reqCtx)
+
+						if len(route.Middlewares) > 0 {
+							fmt.Println("mw injection")
+							for _, m := range route.Middlewares {
+								r := Request{
+									Raw:    req,
+									Params: ps,
+								}
+								intf := m(r)
+								fmt.Println(intf)
+							}
+						}
 						// TODO: parse entity and then pass to the controller -- NOT LIKE THIS !!
 						var en interface{}
 						if route.Entity == nil {
@@ -88,13 +106,15 @@ func boot() error {
 							}
 
 							// we now make sure that it is not a normal error without a code
-							handleErrorResponse(err, writer)
+							handleErrorResponse(err, writer, reqCtx)
 							return
 						}
 
 						c, ok := resp.(RenderMixin)
 
 						if ok {
+							// TODO: add switch statement for type and fix this mess
+
 							writer.Header().Set("Content-Type", c.contentType)
 							writer.Write(c.content)
 							return
@@ -163,7 +183,7 @@ func handle404Response() {
 
 func handleResponse(response interface{}) {}
 
-func handleErrorResponse(err error, writer http.ResponseWriter) {
+func handleErrorResponse(err error, writer http.ResponseWriter, rc RequestContext) {
 	isDevEnv := true
 	if !(app.currentEnv == "" || app.currentEnv == "development") {
 		isDevEnv = false
@@ -190,8 +210,20 @@ func handleErrorResponse(err error, writer http.ResponseWriter) {
 			return
 		}
 		writer.Header().Set("Content-Type", "application/json")
+		rc.Response = b
+		rc.Status = 500
+		go dispatchHooks(afterHooks, rc)
 		writer.Write(b)
 		return
 	}
+
 	writer.Write([]byte(err.Error()))
+}
+
+func dispatchHooks(hooks []RequestHook, rc RequestContext) {
+	if len(hooks) > 0 {
+		for _, h := range afterHooks {
+			h(rc)
+		}
+	}
 }
