@@ -197,7 +197,7 @@ func call(req *Payload) (Response, error) {
 		err = json.Unmarshal(body, req.responseType)
 
 		if err != nil {
-			errMsg := "InkInferenceError: Cannot infer a non-json/non-mappable value to " +
+			errMsg := "InferenceError: Cannot infer a non-json/non-mappable value to " +
 				"specified type: %s. Response.ParsedBody/Response.StringBody of type map is " +
 				"present for access."
 			message := fmt.Sprintf(errMsg, responseType.Name())

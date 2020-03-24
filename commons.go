@@ -1,16 +1,13 @@
 package rubik
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"mime/multipart"
 	"net/url"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -18,193 +15,15 @@ const (
 	ClientAgent = "rubik-http-client/1.1"
 	// HeaderUserAgent supplies user-agent key
 	HeaderUserAgent = "User-Agent"
+	// ContentType http header const
+	ContentType = "Content-Type"
+	// ContentJSON is json content type
+	ContentJSON = "application/json"
+	// ContentURLEncoded is url-encoded content type
+	ContentURLEncoded = "application/x-www-form-urlencoded"
+	// ContentMultipart is url-encoded content type
+	ContentMultipart = "multipart/form-data"
 )
-
-// extractFromType takes in an RequestEntity and returns a final payload
-// that is to be passed to the net/http module
-func extractFromType(a interface{}) (Payload, error) {
-	var extracted = Payload{}
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	fields := reflect.TypeOf(a)
-	values := reflect.ValueOf(a)
-
-	num := fields.NumField()
-
-	for i := 0; i < num; i++ {
-		field := fields.Field(i)
-		tag := field.Tag.Get("rubik")
-		value := values.Field(i)
-
-		// Get route value from RequestEntity
-		if (field.Type == reflect.TypeOf(RequestEntity{})) {
-			route := value.FieldByName("route").String()
-			params, ok := value.FieldByName("Params").Interface().([]string)
-			if ok {
-				extracted.params = params
-			}
-			isJSON := value.FieldByName("JSON").Bool()
-			isURLEncoded := value.FieldByName("URLEncoded").Bool()
-			isFormData := value.FieldByName("FormData").Bool()
-
-			infer := value.FieldByName("Infer").Interface()
-
-			if infer != nil {
-				extracted.responseType = infer
-			}
-
-			extracted.json = isJSON
-			extracted.urlencoded = isURLEncoded
-			extracted.formData = isFormData
-			extracted.path = route
-			if route == "" {
-				return Payload{}, errors.New("InkExtractionError: Ink RequestEntity is initialized without a Route parameter")
-			}
-			continue
-		}
-
-		var op = tag
-
-		if strings.Index(tag, ",") > 0 {
-			splitted := strings.Split(tag, ",")
-			op = splitted[0]
-		}
-
-		if !strings.Contains(op, "|") {
-			return Payload{}, errors.New("InkTagMalformed: Ink tag must be of format key|request_medium('body,query etc..') ")
-		}
-
-		reqTag := strings.Split(op, "|")
-
-		switch reqTag[1] {
-		// TODO: set by type of value
-		case "body":
-			if extracted.body == nil {
-				extracted.body = Values{}
-			}
-
-			exVal := values.Field(i).Interface()
-			strVal, ok := exVal.(string)
-			if !ok {
-				extracted.body.Set(reqTag[0], exVal)
-			} else if strVal != "" {
-				extracted.body.Set(reqTag[0], strVal)
-			}
-			break
-		case "query":
-			if extracted.query == nil {
-				extracted.query = url.Values{}
-				extracted.query.Set(reqTag[0], value.String())
-			} else {
-				extracted.query.Set(reqTag[0], value.String())
-			}
-			break
-		case "form":
-			if field.Type == reflect.TypeOf(File{}) {
-				f, _ := values.Field(i).Interface().(File)
-				if f.Path != "" {
-					file, err := os.Open(f.Path)
-
-					if err != nil {
-						return Payload{}, err
-					}
-
-					defer file.Close()
-
-					part, err := writer.CreateFormFile(reqTag[0], file.Name())
-
-					if err != nil {
-						return Payload{}, err
-					}
-
-					_, err = io.Copy(part, file)
-
-					if err != nil {
-						return Payload{}, err
-					}
-				} else if f.OSFile.Name() != "" {
-					defer f.OSFile.Close()
-
-					part, err := writer.CreateFormFile(reqTag[0], f.OSFile.Name())
-
-					if err != nil {
-						return Payload{}, err
-					}
-
-					_, err = io.Copy(part, f.OSFile)
-
-					if err != nil {
-						return Payload{}, err
-					}
-				}
-			} else if field.Type == reflect.TypeOf([]File{}) {
-				files, _ := values.Field(i).Interface().([]File)
-
-				for _, f := range files {
-					if f.Path != "" {
-						file, err := os.Open(f.Path)
-
-						if err != nil {
-							return Payload{}, err
-						}
-
-						defer file.Close()
-
-						part, err := writer.CreateFormFile(reqTag[0], file.Name())
-
-						if err != nil {
-							return Payload{}, err
-						}
-
-						_, err = io.Copy(part, file)
-
-						if err != nil {
-							return Payload{}, err
-						}
-					} else if f.OSFile.Name() != "" {
-						defer f.OSFile.Close()
-
-						part, err := writer.CreateFormFile(reqTag[0], f.OSFile.Name())
-
-						if err != nil {
-							return Payload{}, err
-						}
-
-						_, err = io.Copy(part, f.OSFile)
-
-						if err != nil {
-							return Payload{}, err
-						}
-					}
-				}
-
-			} else {
-				writer.WriteField(reqTag[0], value.String())
-			}
-			break
-		default:
-			message := fmt.Sprintf("InkUnknownMedium: Not a medium: %s", reqTag[1])
-			return Payload{}, errors.New(message)
-		}
-
-	}
-
-	if body.Len() > 0 && extracted.formData {
-		extracted.headers = url.Values{}
-		extracted.headers.Set("Content-Type", writer.FormDataContentType())
-	}
-
-	err := writer.Close()
-
-	if err != nil {
-		return Payload{}, err
-	}
-
-	extracted.formBody = body
-
-	return extracted, nil
-}
 
 func valuesToMap(values url.Values) map[string]interface{} {
 	var bodyMap = make(map[string]interface{})
@@ -285,18 +104,14 @@ func safeRoutePath(path string) string {
 	return "/" + path
 }
 
-// func checkReqInputs(entity interface{}) bool {
-// 	fields := reflect.TypeOf(entity)
-// 	values := reflect.ValueOf(entity)
+func unCapitalize(target string) string {
+	r := []rune(target)
+	r[0] = unicode.ToLower(r[0])
+	return string(r)
+}
 
-// 	result := false
-// 	num := fields.NumField()
-// 	for i := 0; i < num; i++ {
-// 		field := fields.Field(i)
-// 		if (strings.Contains(field.Tag.Get("ink"), "omitempty") != "" &&
-// 		values.Field(i).String() ==
-// 		) {
-
-// 		}
-// 	}
-// }
+func capitalize(target string) string {
+	r := []rune(target)
+	r[0] = unicode.ToUpper(r[0])
+	return string(r)
+}

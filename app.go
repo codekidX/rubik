@@ -57,13 +57,6 @@ func (re RestErrorMixin) Error() string {
 	return re.Message
 }
 
-// Plugin lets you plug middlewares, guards and routes from different modules
-type Plugin struct {
-	Method  string
-	Pattern string
-	Handler httprouter.Handle
-}
-
 // Middleware intercepts user request and processes it
 type Middleware func(req Request) interface{}
 
@@ -84,13 +77,11 @@ type rubik struct {
 	intermConfig ds.NotationMap
 	rootConfig   *pkg.Config
 	logger       *pkg.Logger
-	emitters     map[string]EmitterFunc
 	currentEnv   string
 	mux          *httprouter.Router
 	blocks       map[string]Block
 	routers      []Router
 	routeInfo    []RouteInfo
-	handle404    http.Handler
 }
 
 // Request ...
@@ -98,7 +89,6 @@ type Request struct {
 	Raw            *http.Request
 	Params         httprouter.Params
 	ResponseHeader Values
-	Session        SessionManager
 	app            *rubik
 	entity         interface{}
 }
@@ -147,16 +137,15 @@ func FromStorage(fileName string) ([]byte, error) {
 	pwd, _ := os.Getwd()
 	var filePath = pwd + string(os.PathSeparator) + "storage" +
 		string(os.PathSeparator) + fileName
-
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, errors.New("FileNotFoundError: " + fileName + " does not exist.")
 	}
 
 	b, err := ioutil.ReadFile(filePath)
-
 	if err != nil {
 		return nil, err
 	}
+
 	return b, err
 }
 
@@ -168,10 +157,12 @@ func GetConfig() interface{} {
 // Attach a block to rubik tree
 func Attach(symbol string, b Block) {
 	if app.blocks[symbol] != nil {
-		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists", symbol, symbol)
+		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists", symbol,
+			symbol)
 		pkg.ErrorMsg(msg)
 		return
 	}
+
 	app.blocks[symbol] = b
 }
 
@@ -290,32 +281,6 @@ func Create(index string) Router {
 func Use(router Router) {
 	app.routers = append(app.routers, router)
 }
-
-//Plug ...
-func Plug(plugin Plugin) {
-	app.mux.Handle(plugin.Method, plugin.Pattern, plugin.Handler)
-}
-
-// PlugAfter ...
-func PlugAfter(plugin Plugin) {
-	app.mux.Handle(plugin.Method, plugin.Pattern, plugin.Handler)
-}
-
-// AddEmitter ...
-// func AddEmitter(event string, efunc EmitterFunc) {
-// 	app.emitters[event] = efunc
-// }
-
-// Emit ...
-// func Emit(event string) error {
-// 	eFunc := app.emitters[event]
-// 	if eFunc == nil {
-// 		return errors.New("Emitter with event: " + event +
-// 			" is not registered. Call AddEmitter() to add an emitter function to cherry server.")
-// 	}
-// 	eFunc()
-// 	return nil
-// }
 
 // SetNotFoundHandler sets custom handler for 404
 func SetNotFoundHandler(h http.Handler) {

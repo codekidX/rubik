@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -14,10 +13,10 @@ func populateRequest(entity interface{}, c *Client) (*Payload, error) {
 	isEntity := checkIsEntity(entity)
 
 	if !isEntity {
-		panic(errors.New("CherryEntityError: The entity you are passing must extend RequestEntity. Take a look at https://okcherry.github.io/troubleshooting#CherryEntityError for more info"))
+		panic(errors.New("EntityError: The entity you are passing must extend RequestEntity. "))
 	}
 
-	req, err := extractFromType(entity)
+	req, err := extract(entity)
 
 	if err != nil {
 		return nil, err
@@ -65,12 +64,11 @@ func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 		if err != nil {
 			return nil, err
 		}
-		httpRequest.Header.Set("Content-Type", "application/json")
+		httpRequest.Header.Set(ContentType, ContentJSON)
 	} else if req.urlencoded && len(req.body) > 0 {
-		fmt.Println("gng url", req.body.Encode())
 		requestBody = []byte(req.body.Encode())
 		httpRequest, err = http.NewRequest(req.requestType, fullURL, bytes.NewBuffer(requestBody))
-		httpRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		httpRequest.Header.Set(ContentType, ContentURLEncoded)
 	} else if req.formData && req.formBody.Len() > 0 {
 		httpRequest, err = http.NewRequest(req.requestType, fullURL, req.formBody)
 		// httpRequest.Header.Set("Content-Type", "multipart/form-data")
@@ -78,8 +76,10 @@ func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 		httpRequest, err = http.NewRequest(req.requestType, fullURL, nil)
 	}
 
-	for k, v := range req.headers {
-		httpRequest.Header.Set(k, v[0])
+	if len(req.headers) > 0 {
+		for k, v := range req.headers {
+			httpRequest.Header.Set(k, v[0])
+		}
 	}
 
 	httpRequest = httpRequest.WithContext(req.context)

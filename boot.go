@@ -176,7 +176,7 @@ func bootMiddlewares() {}
 func bootController() {}
 
 func handle404Response() {
-	if app.handle404 == nil {
+	if app.mux.NotFound == nil {
 		app.mux.NotFound = NotFoundHandler{}
 	}
 }
