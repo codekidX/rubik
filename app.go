@@ -119,7 +119,7 @@ type Route struct {
 	JSON                 bool
 	Entity               interface{}
 	Middlewares          []Middleware
-	Validate             func(entity interface{}) error
+	Validation           Validation
 	Controller           func(entity interface{}) (interface{}, error)
 }
 

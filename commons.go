@@ -73,15 +73,8 @@ func substituteParam(path string, reqParams []string) (string, error) {
 }
 
 func checkIsEntity(entity interface{}) bool {
-	fields := reflect.TypeOf(entity)
-	result := false
-	num := fields.NumField()
-	for i := 0; i < num; i++ {
-		if fields.Field(i).Name == "RequestEntity" {
-			return true
-		}
-	}
-	return result
+	field := reflect.ValueOf(entity).Elem().FieldByName("RequestEntity")
+	return field.IsValid()
 }
 
 func isEmptyEntity(entity struct{}) bool {
@@ -114,4 +107,13 @@ func capitalize(target string) string {
 	r := []rune(target)
 	r[0] = unicode.ToUpper(r[0])
 	return string(r)
+}
+
+func isOneOf(t string, vals ...string) bool {
+	for _, s := range vals {
+		if t == s {
+			return true
+		}
+	}
+	return false
 }

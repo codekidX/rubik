@@ -10,3 +10,4 @@ github.com/printzero/tint v0.0.3 h1:9dXvyS3Bl8GB2Y4HCAgythU1I233aD19WWb8SOPYAj8=
 github.com/printzero/tint v0.0.3/go.mod h1:/CwPg1futUCwDVK10x6pVUDBn/k4+e+MbdVPqzZtSes=
 github.com/rubikorg/blocks v0.0.0-20200320142242-f0eb666c9c44 h1:cb6sLEWEHVspnAP1mbMfLc0eqwNhiRB2iyxw8TLmJI4=
 github.com/rubikorg/blocks v0.0.0-20200320142242-f0eb666c9c44/go.mod h1:69qJ18WGHys0jL96nZjLiL3vLWq9e7tzuGAVQzCjQQQ=
+github.com/rubikorg/rubik v0.0.0-20200320142558-622c411be4d2/go.mod h1:C6FosWVP314zYfxUJyqXv/9S6eHGwua2pPHOhLIc9UI=

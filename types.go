@@ -6,6 +6,10 @@ import (
 	"os"
 )
 
+// Validation is validation operations to be performed
+// on the request entity
+type Validation map[string]string
+
 // SessionManager is an interface contract that rubik.Session uses
 //
 // Anything abiding by this contract can

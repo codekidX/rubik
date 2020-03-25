@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"reflect"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
@@ -56,6 +57,10 @@ func boot() error {
 			pkg.DebugMsg("Booting => " + finalPath)
 
 			if route.Entity != nil {
+				if reflect.TypeOf(route.Entity).Kind() != reflect.Ptr {
+					return errors.New("Entity field must be a pointer to your RequestEntity")
+				}
+
 				validEntity := checkIsEntity(route.Entity)
 				if !validEntity {
 					pkg.ErrorMsg("Your Entity must extend cherry.RequestEntity struct")
@@ -72,6 +77,12 @@ func boot() error {
 							Ctx:     make(map[string]interface{}),
 						}
 
+						en, err := inject(req, ps, route.Entity, route.Validation)
+						if err != nil {
+							handleErrorResponse(err, writer, reqCtx)
+							return
+						}
+
 						go dispatchHooks(beforeHooks, reqCtx)
 
 						if len(route.Middlewares) > 0 {
@@ -85,13 +96,7 @@ func boot() error {
 								fmt.Println(intf)
 							}
 						}
-						// TODO: parse entity and then pass to the controller -- NOT LIKE THIS !!
-						var en interface{}
-						if route.Entity == nil {
-							en = BlankRequestEntity{}
-						} else {
-							en = route.Entity
-						}
+
 						resp, err := route.Controller(en)
 						re, ok := err.(RestErrorMixin)
 
@@ -216,7 +221,6 @@ func handleErrorResponse(err error, writer http.ResponseWriter, rc RequestContex
 		writer.Write(b)
 		return
 	}
-
 	writer.Write([]byte(err.Error()))
 }
 
