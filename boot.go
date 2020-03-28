@@ -36,11 +36,14 @@ func (nfh NotFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func boot() error {
-	handle404Response()
-	err := bootBlocks()
-	if err != nil {
-		return err
+func boot(isREPLMode bool) error {
+	if !isREPLMode {
+		handle404Response()
+		err := bootBlocks()
+		if err != nil {
+			pkg.ErrorMsg(err.Error())
+			return err
+		}
 	}
 
 	bootStatic()
@@ -51,10 +54,11 @@ func boot() error {
 	for _, router := range app.routers {
 		for index := 0; index < len(router.routes); index++ {
 			route := router.routes[index]
-
 			finalPath := safeRouterPath(router.basePath) + safeRoutePath(route.Path)
 
-			pkg.DebugMsg("Booting => " + finalPath)
+			if !isREPLMode {
+				pkg.DebugMsg("Booting => " + finalPath)
+			}
 
 			if route.Entity != nil {
 				if reflect.TypeOf(route.Entity).Kind() != reflect.Ptr {
@@ -77,14 +81,18 @@ func boot() error {
 							Ctx:     make(map[string]interface{}),
 						}
 
+						// TODO: injection error must be 400 bad request
 						en, err := inject(req, ps, route.Entity, route.Validation)
 						if err != nil {
-							handleErrorResponse(err, writer, reqCtx)
+							handleErrorResponse(err, writer, &reqCtx)
 							return
 						}
 
-						go dispatchHooks(beforeHooks, reqCtx)
+						go dispatchHooks(beforeHooks, &reqCtx)
 
+						// TODO: this is something i need to think about after addding the
+						// speculate.go as the middleware response also needs tp be
+						// speculated
 						if len(route.Middlewares) > 0 {
 							fmt.Println("mw injection")
 							for _, m := range route.Middlewares {
@@ -98,8 +106,8 @@ func boot() error {
 						}
 
 						resp, err := route.Controller(en)
+						// TODO: finish this part of code inside speculate.go
 						re, ok := err.(RestErrorMixin)
-
 						// error handling
 						if err != nil {
 							if ok {
@@ -111,7 +119,7 @@ func boot() error {
 							}
 
 							// we now make sure that it is not a normal error without a code
-							handleErrorResponse(err, writer, reqCtx)
+							handleErrorResponse(err, writer, &reqCtx)
 							return
 						}
 
@@ -119,7 +127,6 @@ func boot() error {
 
 						if ok {
 							// TODO: add switch statement for type and fix this mess
-
 							writer.Header().Set("Content-Type", c.contentType)
 							writer.Write(c.content)
 							return
@@ -134,11 +141,15 @@ func boot() error {
 						b, ok := resp.([]byte)
 						if ok {
 							_, _ = writer.Write(b)
+							return
 						}
-						//validReq := route.Validate()
-						//if validReq {
-						//
-						//}
+
+						if reflect.ValueOf(resp).Kind() == reflect.Map {
+							writer.Header().Set(ContentType, ContentJSON)
+							b, _ := json.Marshal(resp)
+							writer.Write(b)
+							return
+						}
 					})
 			} else {
 				pkg.WarnMsg("ROUTE_NOT_BOOTED: No controller assigned for route: " + finalPath)
@@ -188,12 +199,13 @@ func handle404Response() {
 
 func handleResponse(response interface{}) {}
 
-func handleErrorResponse(err error, writer http.ResponseWriter, rc RequestContext) {
+func handleErrorResponse(err error, writer http.ResponseWriter, rc *RequestContext) {
 	isDevEnv := true
 	if !(app.currentEnv == "" || app.currentEnv == "development") {
 		isDevEnv = false
 	}
 
+	// TODO: fix this mess and in the end afterHooks
 	writer.WriteHeader(500)
 	if err.Error() != "" && isDevEnv {
 		serr, ok := err.(tracer)
@@ -224,7 +236,7 @@ func handleErrorResponse(err error, writer http.ResponseWriter, rc RequestContex
 	writer.Write([]byte(err.Error()))
 }
 
-func dispatchHooks(hooks []RequestHook, rc RequestContext) {
+func dispatchHooks(hooks []RequestHook, rc *RequestContext) {
 	if len(hooks) > 0 {
 		for _, h := range afterHooks {
 			h(rc)
