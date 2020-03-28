@@ -3,6 +3,7 @@ package rubik
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -40,5 +41,9 @@ func (sb *App) Decode(name string, target interface{}) error {
 
 // Config get config by name
 func (sb *App) Config(name string) interface{} {
+	if strings.Contains(name, ".") {
+		return nil
+	}
+
 	return sb.app.intermConfig.Get(name)
 }
