@@ -34,7 +34,7 @@ func extract(en interface{}) (Payload, error) {
 
 		// Get route value from RequestEntity
 		if (field.Type == reflect.TypeOf(RequestEntity{})) {
-			route := value.FieldByName("route").String()
+			route := value.FieldByName("PointTo").String()
 			params, ok := value.FieldByName("Params").Interface().([]string)
 			if ok {
 				payload.params = params
@@ -132,7 +132,6 @@ func extract(en interface{}) (Payload, error) {
 	}
 
 	err := writer.Close()
-
 	if err != nil {
 		return Payload{}, err
 	}

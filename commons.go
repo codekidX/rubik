@@ -73,8 +73,12 @@ func substituteParam(path string, reqParams []string) (string, error) {
 }
 
 func checkIsEntity(entity interface{}) bool {
-	field := reflect.ValueOf(entity).Elem().FieldByName("RequestEntity")
-	return field.IsValid()
+	elem := reflect.TypeOf(entity)
+	if elem.Kind() == reflect.Ptr {
+		elem = elem.Elem()
+	}
+	_, ok := elem.FieldByName("RequestEntity")
+	return ok
 }
 
 func isEmptyEntity(entity struct{}) bool {

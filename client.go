@@ -122,14 +122,13 @@ func (c *Client) Delete(entity interface{}) (Response, error) {
 // Download method downloads file from an url from your specified Entity->Route
 // to TargetFilePath passed to the entity
 func (c *Client) Download(entity DownloadRequestEntity) error {
-
-	if entity.route == "" {
+	if entity.PointTo == "" {
 		errMsg := "DownloadRequestEntity must have a route initialized using Route() method"
 		return errors.New(errMsg)
 	}
 
 	// source
-	finalURL := c.url + safeRoutePath(entity.route)
+	finalURL := c.url + safeRoutePath(entity.PointTo)
 	err := downloadCall(finalURL, entity.TargetFilePath)
 
 	if err != nil {
