@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/rubikorg/rubik/internal/checker"
@@ -18,8 +19,8 @@ import (
 
 // inject is the the entry point of request injection in rubik
 // an injection is a process of reading the
-func inject(
-	req *http.Request, pm httprouter.Params, en interface{}, v Validation) (interface{}, error) {
+func inject(req *http.Request,
+	pm httprouter.Params, en interface{}, v Validation) (interface{}, error) {
 	// lets check what type of request it is
 	ctype := req.Header.Get(ContentType)
 	var body = make(map[string]interface{})
@@ -66,19 +67,17 @@ func inject(
 		}
 
 		tag := field.Tag.Get(rubikTag)
-		fmt.Println("Tag", tag)
 		value := values.Elem().Field(i)
 		transport := "query"
 		transportKey := unCapitalize(field.Name)
 		isRequired := false
 
+		if strings.Contains(tag, "!") {
+			isRequired = true
+			tag = strings.ReplaceAll(tag, "!", "")
+		}
 		// get information from the tag
 		if tag != "" {
-			if strings.Contains(tag, "!") {
-				isRequired = true
-				tag = strings.ReplaceAll(tag, "!", "")
-			}
-
 			if strings.Contains(tag, "|") {
 				reqTag := strings.Split(tag, "|")
 				if reqTag[0] != "" {
@@ -138,9 +137,10 @@ func injectValueByType(val interface{}, elem reflect.Value, typ reflect.Kind) {
 		}
 		break
 	case reflect.Int:
-		final, ok := val.(int64)
-		if ok && elem.CanSet() {
-			elem.SetInt(final)
+		value, _ := val.(string)
+		final, ok := strconv.Atoi(value)
+		if ok == nil && elem.CanSet() {
+			elem.SetInt(int64(final))
 		}
 		break
 	case reflect.Struct:

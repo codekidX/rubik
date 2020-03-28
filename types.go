@@ -6,6 +6,22 @@ import (
 	"os"
 )
 
+// ByteType let's rubik know what type of bytes to send as response
+type ByteType int
+
+// Type is a rubik type literal used for indication of response/template types
+var Type = struct {
+	HTML ByteType
+	JSON ByteType
+	Text ByteType
+}{1, 2, 3}
+
+// ByteResponse is the response of rubik server
+type ByteResponse struct {
+	Data interface{}
+	Type ByteType
+}
+
 // Validation is validation operations to be performed
 // on the request entity
 type Validation map[string]string
@@ -23,7 +39,7 @@ type SessionManager interface {
 // It lets you write consolidated clean Go code
 type RequestEntity struct {
 	entityType string
-	route      string
+	PointTo    string
 	Params     []string
 	request    *http.Request
 	FormData   bool
@@ -31,20 +47,6 @@ type RequestEntity struct {
 	JSON       bool
 	Infer      interface{}
 	Cookies    Values
-}
-
-// Route ...
-func (re RequestEntity) Route(path string, values ...string) RequestEntity {
-	re.route = path
-	re.Params = values
-	return re
-}
-
-// Route ...
-func (re DownloadRequestEntity) Route(path string, values ...string) DownloadRequestEntity {
-	re.route = path
-	re.Params = values
-	return re
 }
 
 // GetCtx ...
