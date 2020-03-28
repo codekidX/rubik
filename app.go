@@ -69,7 +69,7 @@ type RequestContext struct {
 }
 
 // RequestHook ...
-type RequestHook func(RequestContext)
+type RequestHook func(*RequestContext)
 
 // Rubik is the instance of Server which holds all the necessary information of apis
 type rubik struct {
@@ -78,6 +78,7 @@ type rubik struct {
 	rootConfig   *pkg.Config
 	logger       *pkg.Logger
 	currentEnv   string
+	url          string
 	mux          *httprouter.Router
 	blocks       map[string]Block
 	routers      []Router
@@ -102,8 +103,8 @@ func (req Request) GetRouteInfo() []RouteInfo {
 func (req Request) Config(accessor string) interface{} {
 	val := req.app.intermConfig.Get(accessor)
 	if val == nil {
-		msg := fmt.Sprintf("MiddlewareAccessorError: cannot access %s from project config",
-			accessor)
+		msg := fmt.Sprintf("MiddlewareAccessorError: cannot access %s from "+
+			"project config", accessor)
 		pkg.ErrorMsg(msg)
 		return nil
 	}
@@ -157,8 +158,8 @@ func GetConfig() interface{} {
 // Attach a block to rubik tree
 func Attach(symbol string, b Block) {
 	if app.blocks[symbol] != nil {
-		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists", symbol,
-			symbol)
+		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists",
+			symbol, symbol)
 		pkg.ErrorMsg(msg)
 		return
 	}
@@ -187,8 +188,9 @@ func Load(config interface{}) error {
 	configKind := reflect.ValueOf(config).Kind()
 
 	if configKind != reflect.Ptr {
-		msg := fmt.Sprintf("NonPointerValueError: Load() method requires pointer variable: %s",
-			configKind.String())
+		fmtmsg := "NonPointerValueError: Load() method requires pointer variable: %s"
+		msg := fmt.Sprintf(fmtmsg, configKind.String())
+
 		return errors.New(msg)
 	}
 
@@ -211,7 +213,8 @@ func Load(config interface{}) error {
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
 			// do this with logger
-			msg := fmt.Sprintf("ConfigNotFound: config file %s.toml does not exist", env)
+			msg := fmt.Sprintf("ConfigNotFound: config file %s.toml does not exist",
+				env)
 			pkg.DebugMsg(msg)
 		} else {
 			envConfigFound = true
@@ -289,10 +292,19 @@ func SetNotFoundHandler(h http.Handler) {
 
 // Run rubik server instance
 func Run(args ...string) error {
-	err := boot()
+	mode := os.Getenv("RUBIK_MODE")
+	if mode != "" && mode == "repl" {
+		err := boot(true)
+		if err != nil {
+			pkg.ErrorMsg("Error while booting: " + err.Error())
+		}
+		repl()
+		return nil
+	}
 
+	err := boot(false)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	var port string
@@ -322,4 +334,13 @@ func Run(args ...string) error {
 // RestError returns a json with the error code and the message
 func RestError(code int, message string) RestErrorMixin {
 	return RestErrorMixin{Code: code, Message: message}
+}
+
+// Send is a terminal function for rubik controller that sends byte response
+// it wraps around your arguments for better reading
+func Send(data interface{}, btype ByteType, err ...error) (ByteResponse, error) {
+	return ByteResponse{
+		Data: data,
+		Type: btype,
+	}, err[0]
 }
