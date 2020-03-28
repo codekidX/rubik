@@ -15,10 +15,19 @@ import (
 	"github.com/rubikorg/rubik/pkg"
 )
 
+// TemplateStruct when extended provides basic integrations with the rubik server
 type TemplateStruct struct {
 	Static string
 }
 
+// SocketURL ensures that your client has a proper transport for communiction after
+// render is done
+func (ts TemplateStruct) SocketURL() string {
+	return app.url
+}
+
+// StackTraceTemplate is the data binded to errors.html templated rendered by
+// rubik server
 type StackTraceTemplate struct {
 	Msg   string
 	Stack []string
@@ -35,18 +44,9 @@ func (rm RenderMixin) Result() []byte {
 	return rm.content
 }
 
-type templateType int
-
-// Type is a rubik type literal used for indication of response/template types
-var Type = struct {
-	HTML templateType
-	JSON templateType
-	Text templateType
-}{1, 2, 3}
-
 // Render returns a mixin holding the data to be rendered on the web page or
 // sent over the wire
-func Render(path string, vars interface{}, ttype templateType) (RenderMixin, error) {
+func Render(path string, vars interface{}, btype ByteType) (RenderMixin, error) {
 	// check for path of template folder
 	templDir := pkg.GetTemplateFolderPath()
 	templPath := templDir + string(os.PathSeparator) + strings.TrimPrefix(path, "/")
@@ -59,7 +59,7 @@ func Render(path string, vars interface{}, ttype templateType) (RenderMixin, err
 	var contentType string
 	var content []byte
 	var err error
-	switch ttype {
+	switch btype {
 	case Type.HTML:
 		contentType = "text/html"
 		content, err = parseHTMLTemplate(templPath, "htmltempl", vars)
@@ -79,8 +79,8 @@ func Render(path string, vars interface{}, ttype templateType) (RenderMixin, err
 // NOTE: this is not to be used as a controller response, this method only encapsulates
 // logic around ParseFiles and makes it easy for developers to handle custom
 // implementations
-func ParseDir(dirName string, vars interface{}, ttype templateType) (map[string]string, error) {
-	var result map[string]string
+func ParseDir(dirName string, vars interface{}, btype ByteType) (map[string]string, error) {
+	var result = make(map[string]string)
 	folder := pkg.GetTemplateFolderPath() + string(os.PathSeparator) + dirName
 	files, err := ioutil.ReadDir(folder)
 	if err != nil {
@@ -89,7 +89,7 @@ func ParseDir(dirName string, vars interface{}, ttype templateType) (map[string]
 
 	for _, f := range files {
 		filePath := folder + string(os.PathSeparator) + f.Name()
-		if ttype == Type.Text || ttype == Type.JSON {
+		if btype == Type.Text || btype == Type.JSON {
 			b, err := parseTextTemplate(filePath, f.Name(), vars)
 			if err != nil {
 				return nil, errors.WithStack(err)
