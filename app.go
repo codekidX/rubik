@@ -298,6 +298,15 @@ func Run(args ...string) error {
 		if err != nil {
 			pkg.ErrorMsg("Error while booting: " + err.Error())
 		}
+
+		// do not run repl if it is not a rubik project
+		// it is a rubik project if the pwd contains rubik.toml
+		projPath := pkg.GetRubikConfigPath()
+		if _, err := os.Stat(projPath); os.IsNotExist(err) {
+			pkg.ErrorMsg("Not a rubik project!")
+			return nil
+		}
+
 		repl()
 		return nil
 	}

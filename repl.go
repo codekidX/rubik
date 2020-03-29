@@ -60,6 +60,7 @@ func selectCommand(args []string) string {
 }
 
 func exitCommand(args []string) string {
+	fmt.Println("Bye!")
 	os.Exit(0)
 	return ""
 }
