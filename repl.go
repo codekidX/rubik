@@ -6,9 +6,63 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
+
+	"github.com/rubikorg/rubik/pkg"
+	"github.com/rubikorg/rubik/replc"
 )
 
-var cmdPrefix = "okrubik> "
+var replPrefix = "okrubik> "
+
+var projectPath = ""
+
+var cmdMap = map[string]func([]string) string{
+	"select": selectCommand,
+	"exit":   exitCommand,
+	"help":   replc.HelpCommand,
+	"list":   replc.ListCommand,
+}
+
+// because we need to keep the project information on the root
+// we defined the selectCommand here. This saves the project path
+// used for evaluation
+func selectCommand(args []string) string {
+	config := pkg.GetRubikConfig()
+	var name string
+	if len(args) > 1 {
+		name = args[1]
+	} else {
+		return "Select command needs argument with app name"
+	}
+
+	// we will always get a rubik config because REPL will open
+	// only when there is rubik.toml in the path
+	for _, p := range config.App {
+		if p.Name == name {
+			projectPath = p.Path
+			break
+		}
+	}
+
+	if projectPath == "" {
+		return "Cannot find your app in rubik.toml file"
+	}
+
+	pwd, _ := os.Getwd()
+	if !strings.Contains(projectPath, "./") {
+		return "Bad rubik.toml. The path to a project must be a relative path. Example: " +
+			"./cmd/server"
+	}
+
+	projectPath = strings.ReplaceAll(projectPath, "./", pwd)
+
+	return fmt.Sprintf("Selected project: %s", name)
+}
+
+func exitCommand(args []string) string {
+	os.Exit(0)
+	return ""
+}
 
 // repl is the command to run the REPL for okrubik
 func repl() {
@@ -19,12 +73,20 @@ func repl() {
 	go watchSigint()
 
 	for {
-		fmt.Print(cmdPrefix)
+		fmt.Print(replPrefix)
 		inp, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Printf("An error occured %s. \n okrubik REPL exited. Bye!", err.Error())
 		}
-		fmt.Println(inp)
+		trinp := strings.TrimSpace(inp)
+
+		cmd := strings.Fields(trinp)
+		fn := cmdMap[cmd[0]]
+		if fn == nil {
+			fmt.Println("No such command")
+		} else {
+			fmt.Println(fn(cmd))
+		}
 	}
 }
 
