@@ -46,7 +46,6 @@ func GetRubikConfigPath() string {
 func GetRubikConfig() *Config {
 	configPath := GetRubikConfigPath()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		DebugMsg("Did not find rubik.toml. Booting server without one.")
 		return &Config{}
 	}
 
