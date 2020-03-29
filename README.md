@@ -1,7 +1,7 @@
 ## Rubik Web Framework for Go
 
 <p align="center">
-    <img src="https://avatars3.githubusercontent.com/u/61872650?s=250&v=4" width="500" height="281">
+    <img src="https://avatars3.githubusercontent.com/u/61872650?s=250&v=4">
 </p>
 
 Rubik framework aims to provide a declarative and reusable abstaction over net/http. Using rubik
