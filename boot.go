@@ -148,6 +148,7 @@ func boot(isREPLMode bool) error {
 							writer.Header().Set(ContentType, ContentJSON)
 							b, _ := json.Marshal(resp)
 							writer.Write(b)
+							go dispatchHooks(afterHooks, &reqCtx)
 							return
 						}
 					})
@@ -238,7 +239,7 @@ func handleErrorResponse(err error, writer http.ResponseWriter, rc *RequestConte
 
 func dispatchHooks(hooks []RequestHook, rc *RequestContext) {
 	if len(hooks) > 0 {
-		for _, h := range afterHooks {
+		for _, h := range hooks {
 			h(rc)
 		}
 	}
