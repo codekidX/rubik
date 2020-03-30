@@ -2,8 +2,6 @@
     <img src="https://avatars3.githubusercontent.com/u/61872650?s=200&v=4">
 </p>
 
-> ### Simple. Clean. Declarative.
-
 Rubik framework aims to provide a declarative and reusable abstaction over net/http. Using rubik
 as your framework will make sure that you do not write any code more than once and also be
 efficient in constructing a block-based application instead of extensions. The framework is
