@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 
@@ -15,16 +16,20 @@ import (
 	"github.com/rubikorg/rubik/pkg"
 )
 
-// TemplateStruct when extended provides basic integrations with the rubik server
-type TemplateStruct struct {
-	Static string
-}
+const (
+	sep = string(os.PathSeparator)
+)
 
-// SocketURL ensures that your client has a proper transport for communiction after
-// render is done
-func (ts TemplateStruct) SocketURL() string {
-	return app.url
-}
+// TemplateStruct when extended provides basic integrations with the rubik server
+// type TemplateStruct struct {
+// 	Static string
+// }
+
+// // SocketURL ensures that your client has a proper transport for communiction after
+// // render is done
+// func (ts TemplateStruct) SocketURL() string {
+// 	return app.url
+// }
 
 // StackTraceTemplate is the data binded to errors.html templated rendered by
 // rubik server
@@ -46,31 +51,63 @@ func (rm RenderMixin) Result() []byte {
 
 // Render returns a mixin holding the data to be rendered on the web page or
 // sent over the wire
-func Render(path string, vars interface{}, btype ByteType) (RenderMixin, error) {
+func Render(btype ByteType, vars interface{}, paths ...string) ByteResponse {
 	// check for path of template folder
 	templDir := pkg.GetTemplateFolderPath()
-	templPath := templDir + string(os.PathSeparator) + strings.TrimPrefix(path, "/")
-	if _, err := os.Stat(templPath); os.IsNotExist(err) {
-		msg := fmt.Sprintf("FileNotFoundError: path %s does not exist", templPath)
-		return RenderMixin{}, errors.New(msg)
+	absPaths := []string{}
+	var templPath string
+	var multiple = false
+	if len(paths) == 0 {
+		return ByteResponse{
+			Status: http.StatusInternalServerError,
+			Error:  errors.New("No paths passed to Render method"),
+		}
+	} else if len(paths) > 1 {
+		for _, path := range paths {
+			templPath := templDir + sep + strings.TrimPrefix(path, "/")
+			if _, err := os.Stat(templPath); os.IsNotExist(err) {
+				msg := fmt.Sprintf("FileNotFoundError: path %s does not exist", templPath)
+				return ByteResponse{
+					Status: http.StatusInternalServerError,
+					Error:  errors.New(msg),
+				}
+			}
+			absPaths = append(absPaths, path)
+		}
+		multiple = true
+	} else {
+		templPath = templDir + sep + strings.TrimPrefix(paths[0], "/")
 	}
 
-	// check which templating to use html or text
-	var contentType string
 	var content []byte
+	resType := Type.templateHTML
 	var err error
 	switch btype {
 	case Type.HTML:
-		contentType = "text/html"
-		content, err = parseHTMLTemplate(templPath, "htmltempl", vars)
+		if multiple {
+			content, err = parseMultipleHTMLTemplate(absPaths, "htmltempl", vars)
+		} else {
+			content, err = parseHTMLTemplate(templPath, "htmltempl", vars)
+		}
 		break
 	case Type.JSON, Type.Text:
-		contentType = "text/plain"
-		content, err = parseTextTemplate(templPath, "texttempl", vars)
+		resType = Type.templateText
+		if multiple {
+			content, err = parseMultipleTextTemplate(absPaths, "texttempl", vars)
+		} else {
+			content, err = parseTextTemplate(templPath, "texttempl", vars)
+		}
 		break
 	}
 
-	return RenderMixin{contentType: contentType, content: content}, err
+	if err != nil {
+		return ByteResponse{
+			Status: http.StatusInternalServerError,
+			Error:  err,
+		}
+	} else {
+		return ByteResponse{Status: 200, Data: content, OfType: resType}
+	}
 }
 
 // ParseDir returns a map of parsed template with key as file name and value as the
@@ -79,12 +116,12 @@ func Render(path string, vars interface{}, btype ByteType) (RenderMixin, error) 
 // NOTE: this is not to be used as a controller response, this method only encapsulates
 // logic around ParseFiles and makes it easy for developers to handle custom
 // implementations
-func ParseDir(dirName string, vars interface{}, btype ByteType) (map[string]string, error) {
+func ParseDir(dirName string, vars interface{}, btype ByteType) ByteResponse {
 	var result = make(map[string]string)
 	folder := pkg.GetTemplateFolderPath() + string(os.PathSeparator) + dirName
 	files, err := ioutil.ReadDir(folder)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return Failure(500, errors.WithStack(err))
 	}
 
 	for _, f := range files {
@@ -92,20 +129,33 @@ func ParseDir(dirName string, vars interface{}, btype ByteType) (map[string]stri
 		if btype == Type.Text || btype == Type.JSON {
 			b, err := parseTextTemplate(filePath, f.Name(), vars)
 			if err != nil {
-				return nil, errors.WithStack(err)
+				return Failure(500, errors.WithStack(err))
 			}
 			result[f.Name()] = string(b)
 		} else {
 			b, err := parseHTMLTemplate(filePath, f.Name(), vars)
 			if err != nil {
-				return nil, errors.WithStack(err)
+				return Failure(500, errors.WithStack(err))
 			}
 			result[f.Name()] = string(b)
 		}
 
 	}
 
-	return result, nil
+	return Success(result, Type.JSON)
+}
+
+func parseMultipleTextTemplate(
+	paths []string, templName string, data interface{}) ([]byte, error) {
+	t, err := text.New(templName).ParseFiles(paths...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	var buf bytes.Buffer
+	err = t.Execute(&buf, data)
+
+	return buf.Bytes(), errors.WithStack(err)
 }
 
 func parseTextTemplate(path, templName string, data interface{}) ([]byte, error) {
@@ -120,6 +170,19 @@ func parseTextTemplate(path, templName string, data interface{}) ([]byte, error)
 	}
 
 	// check if the vars given by calling Parse function has some error
+	var buf bytes.Buffer
+	err = t.Execute(&buf, data)
+
+	return buf.Bytes(), errors.WithStack(err)
+}
+
+func parseMultipleHTMLTemplate(
+	paths []string, templName string, data interface{}) ([]byte, error) {
+	t, err := html.New(templName).ParseFiles(paths...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	var buf bytes.Buffer
 	err = t.Execute(&buf, data)
 

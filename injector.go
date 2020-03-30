@@ -22,7 +22,7 @@ import (
 func inject(req *http.Request,
 	pm httprouter.Params, en interface{}, v Validation) (interface{}, error) {
 	// lets check what type of request it is
-	ctype := req.Header.Get(ContentType)
+	ctype := req.Header.Get(Content.Header)
 	var body = make(map[string]interface{})
 	var params = make(map[string]string)
 	// check if any params in the route
@@ -39,19 +39,20 @@ func inject(req *http.Request,
 	}
 
 	switch ctype {
-	case ContentJSON:
+	case Content.JSON:
 		err = json.Unmarshal(b, &body)
 		if err != nil {
 			return nil, err
 		}
-	case ContentURLEncoded:
+	case Content.URLEncoded:
 		var encs url.Values
 		encs, err = url.ParseQuery(string(b))
 		// normalize the http.Values type to flat map
 		for k, v := range encs {
 			body[k] = v[0]
 		}
-	case ContentMultipart:
+	// DANGER: need to evalueate multipart form data
+	case Content.Multipart:
 		break
 	}
 

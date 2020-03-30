@@ -44,19 +44,21 @@ func TestUse(t *testing.T) {
 }
 
 func TestFromStorage(t *testing.T) {
-	_, err := FromStorage("noSuchFile")
-	if err == nil {
+	resp := FromStorage("noSuchFile")
+	if resp.Error == nil {
 		t.Error("FromStorage() did not throw an error when it did not find the file")
 	}
 }
 
 func TestRestError(t *testing.T) {
-	err := RestError(400, "something")
+	_, err := RestError(400, "something")
 	if reflect.ValueOf(err).Type() != reflect.ValueOf(RestErrorMixin{}).Type() {
 		t.Error("RestError() did not return a RestErrorMixin")
+		return
 	}
 
-	if err.Code != 400 || err.Message != "something" {
-		t.Error("RestError() does not contain proper data:", err)
+	re, _ := err.(RestErrorMixin)
+	if re.Code != 400 || re.Message != "something" {
+		t.Error("RestError() does not contain proper data:", re)
 	}
 }

@@ -13,15 +13,14 @@ import (
 	"github.com/rubikorg/rubik/pkg"
 )
 
-// NotFoundHandler is rubik's not found route renderer
-type NotFoundHandler struct{}
+// notFoundHandler is rubik's not found route renderer
+type notFoundHandler struct{}
 
-func (nfh NotFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	stt := StackTraceTemplate{
 		Msg: "Route " + r.URL.Path + " not found",
 	}
 
-	var b []byte
 	b, err := parseHTMLTemplate(pkg.GetErrorHTMLPath(), "errortmpl", stt)
 	if err != nil {
 		serr, _ := err.(tracer)
@@ -74,18 +73,24 @@ func boot(isREPLMode bool) error {
 			}
 
 			if route.Controller != nil {
+				// DANGER: code should depend upon route.Method
 				app.mux.GET(finalPath,
 					func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+
 						reqCtx := RequestContext{
 							Request: req,
 							Ctx:     make(map[string]interface{}),
 						}
 
-						// TODO: injection error must be 400 bad request
-						en, err := inject(req, ps, route.Entity, route.Validation)
-						if err != nil {
-							handleErrorResponse(err, writer, &reqCtx)
-							return
+						var en interface{}
+						if route.Entity != nil {
+							var err error
+							en, err = inject(req, ps, route.Entity, route.Validation)
+							if err != nil {
+								// TODO: injection error must be 400 bad request
+								handleErrorResponse(err, writer, &reqCtx)
+								return
+							}
 						}
 
 						go dispatchHooks(beforeHooks, &reqCtx)
@@ -105,52 +110,68 @@ func boot(isREPLMode bool) error {
 							}
 						}
 
-						resp, err := route.Controller(en)
-						// TODO: finish this part of code inside speculate.go
-						re, ok := err.(RestErrorMixin)
-						// error handling
-						if err != nil {
-							if ok {
-								writer.Header().Set("Content-Type", "application/json")
-								writer.WriteHeader(re.Code)
-								b, _ := json.Marshal(err)
-								_, _ = writer.Write(b)
+						var resp interface{}
+						bresp := route.Controller(en)
+
+						// set values in request context
+						reqCtx.Status = bresp.Status
+
+						// check if error response
+						if bresp.Status != http.StatusOK {
+							rem := RestErrorMixin{
+								Code:    bresp.Status,
+								Message: bresp.Error.Error(),
+							}
+
+							if bresp.OfType == Type.JSON {
+								b, _ := json.Marshal(rem)
+								writeResponse(writer, bresp.Status, Content.JSON, b)
+							} else {
+								writeResponse(writer, bresp.Status, Content.Text,
+									[]byte(rem.Message))
+							}
+							reqCtx.Response = rem
+						} else {
+							resp = bresp.Data
+
+							switch bresp.OfType {
+							case Type.HTML:
+								s, _ := resp.(string)
+								writeResponse(writer, bresp.Status, Content.HTML, []byte(s))
+								break
+							case Type.Text:
+								s, _ := resp.(string)
+								writeResponse(writer, bresp.Status, Content.Text, []byte(s))
+								break
+							case Type.JSON:
+								b, _ := json.Marshal(resp)
+								writeResponse(writer, bresp.Status, Content.JSON, b)
+								break
+							case Type.templateHTML, Type.templateText:
+								var conType = Content.HTML
+								if bresp.OfType == Type.templateText {
+									conType = Content.Text
+								}
+
+								b, _ := bresp.Data.([]byte)
+								writeResponse(writer, bresp.Status, conType, b)
+								break
+							case Type.Bytes:
+								b, _ := resp.([]byte)
+								// TODO: write something about this coersion error
+								// if !ok {
+								// }
+								// TODO: check how to set header for a file byte body
+								writeResponse(writer, bresp.Status, Content.Text, b)
+								break
+							default:
 								return
 							}
 
-							// we now make sure that it is not a normal error without a code
-							handleErrorResponse(err, writer, &reqCtx)
-							return
+							reqCtx.Response = bresp.Data
 						}
 
-						c, ok := resp.(RenderMixin)
-
-						if ok {
-							// TODO: add switch statement for type and fix this mess
-							writer.Header().Set("Content-Type", c.contentType)
-							writer.Write(c.content)
-							return
-						}
-
-						a, ok := resp.(string)
-						if ok {
-							_, _ = writer.Write([]byte(a))
-							return
-						}
-
-						b, ok := resp.([]byte)
-						if ok {
-							_, _ = writer.Write(b)
-							return
-						}
-
-						if reflect.ValueOf(resp).Kind() == reflect.Map {
-							writer.Header().Set(ContentType, ContentJSON)
-							b, _ := json.Marshal(resp)
-							writer.Write(b)
-							go dispatchHooks(afterHooks, &reqCtx)
-							return
-						}
+						go dispatchHooks(afterHooks, &reqCtx)
 					})
 			} else {
 				pkg.WarnMsg("ROUTE_NOT_BOOTED: No controller assigned for route: " + finalPath)
@@ -164,9 +185,22 @@ func boot(isREPLMode bool) error {
 	return nil
 }
 
+func writeResponse(w http.ResponseWriter, status int, contype string, body []byte) {
+	w.Header().Set(Content.Header, contype)
+	w.WriteHeader(status)
+	w.Write(body)
+}
+
 func bootBlocks() error {
 	if len(app.blocks) > 0 {
 		for k, v := range app.blocks {
+			// make sure that some symbols are reserved, this helps when
+			// there are blocks which which are attaching to the internal
+			// function of rubik
+			if isOneOf(k, "session") {
+				return errors.New(fmt.Sprintf("%s is a reserved symbol", k))
+			}
+
 			err := v.OnAttach(&App{app: *app, BlockName: k})
 			if err != nil {
 				return err
@@ -186,7 +220,23 @@ func bootStatic() {
 	}
 }
 
-func bootGuard() {}
+func bootGuard(
+	w http.ResponseWriter, g AuthorizationGuard, placebo *App, headers http.Header) error {
+	if g.Require() != "" {
+		val := app.intermConfig.Get(g.Require())
+		if val == nil {
+			msg := fmt.Sprintf("No config object [%s]",
+				g.Require())
+			return errors.New(msg)
+		}
+	}
+
+	if g.GetRealm() != "" {
+		w.Header().Set("WWW-Authenticate", g.GetRealm())
+	}
+
+	return g.Authorize(placebo, headers)
+}
 
 func bootMiddlewares() {}
 
@@ -194,7 +244,7 @@ func bootController() {}
 
 func handle404Response() {
 	if app.mux.NotFound == nil {
-		app.mux.NotFound = NotFoundHandler{}
+		app.mux.NotFound = notFoundHandler{}
 	}
 }
 

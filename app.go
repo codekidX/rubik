@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -121,7 +122,7 @@ type Route struct {
 	Entity               interface{}
 	Middlewares          []Middleware
 	Validation           Validation
-	Controller           func(entity interface{}) (interface{}, error)
+	Controller           func(entity interface{}) ByteResponse
 }
 
 // RouteInfo ...
@@ -134,20 +135,20 @@ type RouteInfo struct {
 }
 
 // FromStorage returns the file bytes of a given fileName as response
-func FromStorage(fileName string) ([]byte, error) {
+func FromStorage(fileName string) ByteResponse {
 	pwd, _ := os.Getwd()
 	var filePath = pwd + string(os.PathSeparator) + "storage" +
 		string(os.PathSeparator) + fileName
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, errors.New("FileNotFoundError: " + fileName + " does not exist.")
+		return Failure(500, errors.New("FileNotFoundError: "+fileName+" does not exist."))
 	}
 
 	b, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return nil, err
+		return Failure(500, err)
 	}
 
-	return b, err
+	return Success(b, Type.Bytes)
 }
 
 // GetConfig returns the injected config from the Load method
@@ -341,15 +342,33 @@ func Run(args ...string) error {
 }
 
 // RestError returns a json with the error code and the message
-func RestError(code int, message string) RestErrorMixin {
-	return RestErrorMixin{Code: code, Message: message}
+func RestError(code int, message string) (interface{}, error) {
+	return nil, RestErrorMixin{Code: code, Message: message}
 }
 
-// Send is a terminal function for rubik controller that sends byte response
+// Success is a terminal function for rubik controller that sends byte response
 // it wraps around your arguments for better reading
-func Send(data interface{}, btype ByteType, err ...error) (ByteResponse, error) {
+func Success(data interface{}, btype ...ByteType) ByteResponse {
+	strings.Contains("a", "a")
 	return ByteResponse{
-		Data: data,
-		Type: btype,
-	}, err[0]
+		Status: http.StatusOK,
+		Data:   data,
+		OfType: defByteType(btype),
+	}
+}
+
+func Failure(status int, err error, btype ...ByteType) ByteResponse {
+	return ByteResponse{
+		Status: status,
+		Error:  err,
+		OfType: defByteType(btype),
+	}
+}
+
+func defByteType(typs []ByteType) ByteType {
+	if len(typs) > 0 {
+		return typs[0]
+	} else {
+		return Type.Text
+	}
 }

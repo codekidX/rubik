@@ -11,18 +11,10 @@ import (
 )
 
 const (
-	// ClientAgent is the user agent header
-	ClientAgent = "rubik-http-client/1.1"
+	// clientAgent is the user agent header
+	clientAgent = "rubik-http-client/1.1"
 	// HeaderUserAgent supplies user-agent key
-	HeaderUserAgent = "User-Agent"
-	// ContentType http header const
-	ContentType = "Content-Type"
-	// ContentJSON is json content type
-	ContentJSON = "application/json"
-	// ContentURLEncoded is url-encoded content type
-	ContentURLEncoded = "application/x-www-form-urlencoded"
-	// ContentMultipart is url-encoded content type
-	ContentMultipart = "multipart/form-data"
+	headerUserAgent = "User-Agent"
 )
 
 func valuesToMap(values url.Values) map[string]interface{} {

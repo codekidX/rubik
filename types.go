@@ -11,15 +11,36 @@ type ByteType int
 
 // Type is a rubik type literal used for indication of response/template types
 var Type = struct {
-	HTML ByteType
-	JSON ByteType
-	Text ByteType
-}{1, 2, 3}
+	HTML         ByteType
+	JSON         ByteType
+	Text         ByteType
+	Bytes        ByteType
+	templateHTML ByteType
+	templateText ByteType
+}{1, 2, 3, 4, 5, 6}
+
+var Content = struct {
+	Header     string
+	JSON       string
+	Text       string
+	HTML       string
+	URLEncoded string
+	Multipart  string
+}{
+	"Content-Type",
+	"application/json",
+	"text/plain",
+	"text/html",
+	"application/x-www-form-urlencoded",
+	"multipart/form-data",
+}
 
 // ByteResponse is the response of rubik server
 type ByteResponse struct {
-	Data interface{}
-	Type ByteType
+	Status int
+	Data   interface{}
+	OfType ByteType
+	Error  error
 }
 
 // Validation is validation operations to be performed
@@ -33,6 +54,26 @@ type SessionManager interface {
 	Get(string) string
 	Set(string, string) error
 	Delete(string) bool
+}
+
+// AuthorizationGuard defines the requirement of a rubik route guard
+// Guards are generally used to negate the request, eg: JWT, ACL etc..
+// The implementation for a guard should be transparent with specifiction
+// of realm and config requirement.
+// For more information take a look at the BasicGuard implementation
+// here: https://github.com/rubikorg/blocks/blob/master/guard/basic.go
+type AuthorizationGuard interface {
+	// Require specifies the config requirement of your Guard
+	// this method must return the name of the config that is
+	// to be checked before setting the WWW-Authenticate header
+	Require() string
+	// Require must return the value of the realm to be set
+	// inside WWW-Authenticate header header
+	GetRealm() string
+	// Authorize holds the main authorization logic for a given guard
+	// NOTE: Rubik does not proceed with the request if this
+	// method returns an error. The error will denote HTTP Status: 401
+	Authorize(*App, http.Header) error
 }
 
 // RequestEntity holds the data for a single API call

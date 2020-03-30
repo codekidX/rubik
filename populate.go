@@ -64,11 +64,11 @@ func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 		if err != nil {
 			return nil, err
 		}
-		httpRequest.Header.Set(ContentType, ContentJSON)
+		httpRequest.Header.Set(Content.Header, Content.JSON)
 	} else if req.urlencoded && len(req.body) > 0 {
 		requestBody = []byte(req.body.Encode())
 		httpRequest, err = http.NewRequest(req.requestType, fullURL, bytes.NewBuffer(requestBody))
-		httpRequest.Header.Set(ContentType, ContentURLEncoded)
+		httpRequest.Header.Set(Content.Header, Content.URLEncoded)
 	} else if req.formData && req.formBody.Len() > 0 {
 		httpRequest, err = http.NewRequest(req.requestType, fullURL, req.formBody)
 		// httpRequest.Header.Set("Content-Type", "multipart/form-data")
@@ -88,7 +88,7 @@ func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 		return nil, err
 	}
 
-	httpRequest.Header.Set(HeaderUserAgent, ClientAgent)
+	httpRequest.Header.Set(headerUserAgent, clientAgent)
 
 	return httpRequest, nil
 }

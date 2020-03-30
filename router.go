@@ -19,7 +19,7 @@ func (ro *Router) StorageRoutes(fileNames ...string) {
 		r := Route{
 			Method: "GET",
 			Path:   safeRoutePath(file),
-			Controller: func(entity interface{}) (interface{}, error) {
+			Controller: func(entity interface{}) ByteResponse {
 				return FromStorage(file)
 			},
 		}

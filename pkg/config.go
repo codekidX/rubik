@@ -14,7 +14,8 @@ type Project struct {
 	Communicable bool   `toml:"communicable"`
 }
 
-// Config is the main config for your cherry server
+// Config is the main config for your rubik runtime
+// this is declared inside a rubik.toml file
 type Config struct {
 	ProjectName string `toml:"name"`
 	IsFlat      bool   `toml:"flat"`

@@ -15,7 +15,7 @@ type Logger struct {
 
 // RubikMsg appends a diamond before the log message
 func RubikMsg(message string) {
-	template := "\n\n 💠  " + message
+	template := "\n\n ❒  " + message
 	fmt.Println(template)
 }
 
