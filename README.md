@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://avatars3.githubusercontent.com/u/61872650?s=250&v=4">
+    <img src="https://avatars3.githubusercontent.com/u/61872650?s=200&v=4">
 </p>
 
 > ### Simple. Clean. Declarative.
@@ -14,6 +14,6 @@ without the need of explicit dependency injection.
 
 - [x] Make Rubik fun to work with!
 - [ ] Provide a great tooling for Rubik
-- [ ] Make client-server development in easier Go
+- [ ] Make client-server development easier in Go
 - [ ] Easier inter-server communication
 - [ ] On-demand client server communication
