@@ -13,7 +13,12 @@ type Block interface {
 	OnAttach(*App) error
 }
 
-// App is a restricted environment for blocks development
+// App is a sandboxed object used by the external blocks of code
+// to access some risk-free part of your rubik server
+// For example:
+// App do not have full access to your project config but it has
+// the ability to decode the config that it needs for
+// only this block of code to work
 type App struct {
 	BlockName string
 	app       rubik
