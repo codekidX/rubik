@@ -19,6 +19,9 @@ var Type = struct {
 	templateText ByteType
 }{1, 2, 3, 4, 5, 6}
 
+// Content is a struct that holds default values of Content-Type headers
+// it can be used throughout your rubik application for avoiding basic
+// spell mistakes
 var Content = struct {
 	Header     string
 	JSON       string
@@ -33,6 +36,24 @@ var Content = struct {
 	"text/html",
 	"application/x-www-form-urlencoded",
 	"multipart/form-data",
+}
+
+type rx struct {
+	ctl Controller
+	en  interface{}
+}
+
+// Message that is to be sent in communicator channel
+type Message struct {
+	Communicator string
+	Topic        string
+	Body         interface{}
+}
+
+// MessagePasser holds the channels for communication with rubik server
+type MessagePasser struct {
+	Message chan Message
+	Error   chan error
 }
 
 // ByteResponse is the response of rubik server
@@ -56,6 +77,12 @@ type SessionManager interface {
 	Delete(string) bool
 }
 
+// Communicator interface is used to handle the service/driver that
+// rubik's inherent communication depends upon
+type Communicator interface {
+	Send(string, interface{}) error
+}
+
 // AuthorizationGuard defines the requirement of a rubik route guard
 // Guards are generally used to negate the request, eg: JWT, ACL etc..
 // The implementation for a guard should be transparent with specifiction
@@ -76,9 +103,9 @@ type AuthorizationGuard interface {
 	Authorize(*App, http.Header) error
 }
 
-// RequestEntity holds the data for a single API call
+// Entity holds the data for a single API call
 // It lets you write consolidated clean Go code
-type RequestEntity struct {
+type Entity struct {
 	entityType string
 	PointTo    string
 	Params     []string
@@ -90,6 +117,13 @@ type RequestEntity struct {
 	Cookies    Values
 }
 
+// GobEntity extends Entity and let's rubik know that this date is
+// present inside body of the request and you need to decode it using
+// GobDecoder
+type GobEntity struct {
+	Entity
+}
+
 // GetCtx ...
 // func (re RequestEntity) GetCtx() *Payload {
 // 	return re.request
@@ -97,12 +131,12 @@ type RequestEntity struct {
 
 // BlankRequestEntity ...
 type BlankRequestEntity struct {
-	RequestEntity
+	Entity
 }
 
 // DownloadRequestEntity ...
 type DownloadRequestEntity struct {
-	RequestEntity
+	Entity
 	TargetFilePath string
 }
 

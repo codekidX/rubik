@@ -69,7 +69,7 @@ func checkIsEntity(entity interface{}) bool {
 	if elem.Kind() == reflect.Ptr {
 		elem = elem.Elem()
 	}
-	_, ok := elem.FieldByName("RequestEntity")
+	_, ok := elem.FieldByName("Entity")
 	return ok
 }
 

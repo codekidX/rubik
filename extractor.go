@@ -32,8 +32,8 @@ func extract(en interface{}) (Payload, error) {
 		tag := field.Tag.Get("rubik")
 		value := values.Field(i)
 
-		// Get route value from RequestEntity
-		if (field.Type == reflect.TypeOf(RequestEntity{})) {
+		// Get route value from Entity
+		if (field.Type == reflect.TypeOf(Entity{})) {
 			route := value.FieldByName("PointTo").String()
 			params, ok := value.FieldByName("Params").Interface().([]string)
 			if ok {
@@ -54,7 +54,7 @@ func extract(en interface{}) (Payload, error) {
 			payload.formData = isFormData
 			payload.path = route
 			if route == "" {
-				return Payload{}, errors.New("ExtractionError: RequestEntity is initialized " +
+				return Payload{}, errors.New("ExtractionError: Entity is initialized " +
 					"without a Route parameter")
 			}
 			continue

@@ -28,3 +28,6 @@ mycherry.go
 
 # vi swap files
 *.swp
+
+#my workspace
+rubik.code-workspace

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -26,23 +27,25 @@ var app = &rubik{
 	logger: &pkg.Logger{
 		CanLog: true,
 	},
-	blocks: make(map[string]Block),
+	blocks:      make(map[string]Block),
+	msgRegistry: make(map[string]rx),
+	comm:        make(map[string]Communicator),
 }
 
 var blocks = make(map[string]interface{})
 var beforeHooks []RequestHook
 var afterHooks []RequestHook
 
-// Session is a manager for managing rubik server sessions
-var Session SessionManager
+// Dispatch is topic dispatcher of rubik server
+var Dispatch = MessagePasser{
+	Message: make(chan Message),
+	Error:   make(chan error),
+}
 
 const (
 	// Version of rubik
-	Version = "v0.1"
+	Version = "0.1"
 )
-
-// EmitterFunc defines an anonymous func
-type EmitterFunc func()
 
 type tracer interface {
 	StackTrace() errors.StackTrace
@@ -60,6 +63,9 @@ func (re RestErrorMixin) Error() string {
 
 // Middleware intercepts user request and processes it
 type Middleware func(req Request) interface{}
+
+// Controller ...
+type Controller func(entity interface{}) ByteResponse
 
 // RequestContext ...
 type RequestContext struct {
@@ -84,6 +90,8 @@ type rubik struct {
 	blocks       map[string]Block
 	routers      []Router
 	routeInfo    []RouteInfo
+	comm         map[string]Communicator
+	msgRegistry  map[string]rx
 }
 
 // Request ...
@@ -122,7 +130,7 @@ type Route struct {
 	Entity               interface{}
 	Middlewares          []Middleware
 	Validation           Validation
-	Controller           func(entity interface{}) ByteResponse
+	Controller           Controller
 }
 
 // RouteInfo ...
@@ -171,7 +179,7 @@ func Attach(symbol string, b Block) {
 // GetBlock returns the block that is attached to rubik represented by the
 // symbol supplied as the parameter
 func GetBlock(symbol string) Block {
-	return app.blocks[symbol]
+	return app.blocks[strings.ToLower(symbol)]
 }
 
 // BeforeRequest ...
@@ -210,7 +218,7 @@ func Load(config interface{}) error {
 
 	if env != "" {
 		envConfigPath = pwd + string(os.PathSeparator) + "config" +
-			string(os.PathSeparator) + env + ".toml"
+			sep + env + ".toml"
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
 			// do this with logger
@@ -291,28 +299,47 @@ func SetNotFoundHandler(h http.Handler) {
 	app.mux.NotFound = h
 }
 
+// Tx is rubik's transmission method from which is intended to
+// transmit the information from one place to another depending upon
+// the information specified inside the target paramater
+func Tx(blockName string, target string, body interface{}) {
+	if app.comm[blockName] == nil {
+		pkg.ErrorMsg(fmt.Sprintf("No such trasmitor %s", blockName))
+		return
+	}
+	go app.comm[blockName].Send(target, body)
+}
+
+// Rx is recieving method of rubik which register's recievers for
+// a specific topic and and handles the execution of the reciever
+// on evaluating a message from the source using the controller
+// passed as the parameter
+func Rx(blockName string, topic string, entity interface{}, fn Controller) {
+	if entity != nil {
+		if reflect.ValueOf(entity).Kind() != reflect.Ptr {
+			msg := fmt.Sprintf("Entity for Rx() method for topic %s requires a pointer type",
+				topic)
+			panic(errors.New(msg))
+		}
+	}
+
+	var name = blockName
+	if blockName == "" {
+		name = "int"
+	}
+	tag := T(name, topic)
+	app.msgRegistry[tag] = rx{fn, entity}
+}
+
 // Run rubik server instance
 func Run(args ...string) error {
-	mode := os.Getenv("RUBIK_MODE")
-	if mode != "" && mode == "repl" {
-		err := boot(true)
-		if err != nil {
-			pkg.ErrorMsg("Error while booting: " + err.Error())
-		}
-
-		// do not run repl if it is not a rubik project
-		// it is a rubik project if the pwd contains rubik.toml
-		projPath := pkg.GetRubikConfigPath()
-		if _, err := os.Stat(projPath); os.IsNotExist(err) {
-			pkg.ErrorMsg("Not a rubik project!")
-			return nil
-		}
-
-		repl()
+	v, err := strconv.ParseFloat(Version, 32)
+	if v > 1.0 {
+		runRepl()
 		return nil
 	}
 
-	err := boot(false)
+	err = boot(false)
 	if err != nil {
 		return err
 	}
@@ -357,6 +384,12 @@ func Success(data interface{}, btype ...ByteType) ByteResponse {
 	}
 }
 
+// Failure returns a ByteResponse type with given status code
+// The ByteType parameter is optional as you can convert your
+// error into a JSON or plain text
+// FACT: if you dont have an error object with you in the moment
+// you can use r.E() to quickly wrap your stirng into an error
+// and pass it inside this function
 func Failure(status int, err error, btype ...ByteType) ByteResponse {
 	return ByteResponse{
 		Status: status,
@@ -365,10 +398,48 @@ func Failure(status int, err error, btype ...ByteType) ByteResponse {
 	}
 }
 
+// E returns errors.New's error object
+// NOTE: this error is not stdlib errors package
+// this is pkg/errors error wrapper
+func E(msg string) error {
+	return errors.New(msg)
+}
+
+// T returns the tag for your receiver when you describe it in Rx() method
+// Tag is always defined as
+//
+// BlockName : Topic string
+// If BlockName is empty string then the tag uses "int" (internal)
+// Denoting that the message is used for internal server purposes
+func T(block string, topic string) string {
+	if block == "" {
+		return fmt.Sprintf("int:%s", topic)
+	}
+	return fmt.Sprintf("%s:%s", block, topic)
+}
+
 func defByteType(typs []ByteType) ByteType {
 	if len(typs) > 0 {
 		return typs[0]
-	} else {
-		return Type.Text
+	}
+	return Type.Text
+}
+
+func runRepl() {
+	mode := os.Getenv("RUBIK_MODE")
+	if mode != "" && mode == "repl" {
+		err := boot(true)
+		if err != nil {
+			pkg.ErrorMsg("Error while booting: " + err.Error())
+		}
+
+		// do not run repl if it is not a rubik project
+		// it is a rubik project if the pwd contains rubik.toml
+		projPath := pkg.GetRubikConfigPath()
+		if _, err := os.Stat(projPath); os.IsNotExist(err) {
+			pkg.ErrorMsg("Not a rubik project!")
+		}
+
+		repl()
 	}
 }

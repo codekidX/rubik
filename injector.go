@@ -63,7 +63,7 @@ func inject(req *http.Request,
 	for i := 0; i < num; i++ {
 		field := fields.Field(i)
 
-		if field.Name == "RequestEntity" {
+		if field.Name == "Entity" {
 			continue
 		}
 

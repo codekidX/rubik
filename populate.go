@@ -13,7 +13,7 @@ func populateRequest(entity interface{}, c *Client) (*Payload, error) {
 	isEntity := checkIsEntity(entity)
 
 	if !isEntity {
-		panic(errors.New("EntityError: The entity you are passing must extend RequestEntity. "))
+		panic(errors.New("EntityError: The entity you are passing must extend Entity"))
 	}
 
 	req, err := extract(entity)

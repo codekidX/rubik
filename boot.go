@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
@@ -36,6 +37,8 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func boot(isREPLMode bool) error {
+	go bootMessageListener()
+
 	if !isREPLMode {
 		handle404Response()
 		err := bootBlocks()
@@ -61,12 +64,12 @@ func boot(isREPLMode bool) error {
 
 			if route.Entity != nil {
 				if reflect.TypeOf(route.Entity).Kind() != reflect.Ptr {
-					return errors.New("Entity field must be a pointer to your RequestEntity")
+					return errors.New("Entity field must be a pointer to your Entity")
 				}
 
 				validEntity := checkIsEntity(route.Entity)
 				if !validEntity {
-					pkg.ErrorMsg("Your Entity must extend cherry.RequestEntity struct")
+					pkg.ErrorMsg("Your Entity must extend cherry.Entity struct")
 					errored = true
 					continue
 				}
@@ -194,17 +197,30 @@ func writeResponse(w http.ResponseWriter, status int, contype string, body []byt
 func bootBlocks() error {
 	if len(app.blocks) > 0 {
 		for k, v := range app.blocks {
-			// make sure that some symbols are reserved, this helps when
-			// there are blocks which which are attaching to the internal
-			// function of rubik
-			if isOneOf(k, "session") {
-				return errors.New(fmt.Sprintf("%s is a reserved symbol", k))
+			// Attaching inherent blocks to the rubik server
+			// Inherent blocks are nothing but blocks that are intended
+			// to be attached to the core functionality of rubik server
+			// Rather than attaching a block as an extended functionality
+			// you can access these blocks as a part of core API
+			genBlockName := strings.ToLower(k)
+			if strings.Contains(genBlockName, "messagepasser") {
+				msgPasser, ok := v.(Communicator)
+				if !ok {
+					return errors.New("Value for message passer block must implement the " +
+						"MessagePasser interface")
+				}
+				err := v.OnAttach(&App{app: *app, BlockName: k})
+				if err != nil {
+					return err
+				}
+				app.comm[k] = msgPasser
+			} else {
+				err := v.OnAttach(&App{app: *app, BlockName: k})
+				if err != nil {
+					return err
+				}
 			}
 
-			err := v.OnAttach(&App{app: *app, BlockName: k})
-			if err != nil {
-				return err
-			}
 			msg := fmt.Sprintf("=[ @(%s) ]= block attached", k)
 			msg = tint.Init().Exp(msg, tint.Cyan.Bold())
 			fmt.Println(msg)
@@ -292,5 +308,22 @@ func dispatchHooks(hooks []RequestHook, rc *RequestContext) {
 		for _, h := range hooks {
 			h(rc)
 		}
+	}
+}
+
+func bootMessageListener() {
+	select {
+	case msg := <-Dispatch.Message:
+		tag := T(msg.Communicator, msg.Topic)
+		if app.msgRegistry[tag].ctl == nil {
+			msg := fmt.Sprintf("A message was dispatched for %s block, but no receiver found", tag)
+			pkg.WarnMsg(msg)
+		} else {
+			go app.msgRegistry[tag].ctl(msg.Body)
+		}
+		break
+	case err := <-Dispatch.Error:
+		pkg.ErrorMsg(err.Error())
+		break
 	}
 }

@@ -15,7 +15,8 @@ import (
 	"time"
 )
 
-// Client is a basic building block of ink http client
+// Client is the implementation for rubik project to create
+// a common abstraction of HTTP calls by passing defined entity
 type Client struct {
 	httpClient  http.Client
 	url         string
