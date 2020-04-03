@@ -17,7 +17,7 @@ import (
 type notFoundHandler struct{}
 
 func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	stt := StackTraceTemplate{
+	stt := stackTraceTemplate{
 		Msg: "Route " + r.URL.Path + " not found",
 	}
 
@@ -262,7 +262,7 @@ func handleErrorResponse(err error, writer http.ResponseWriter, rc *RequestConte
 		serr, ok := err.(tracer)
 		var msg = err.Error()
 		var stack []string
-		var stt = StackTraceTemplate{
+		var stt = stackTraceTemplate{
 			Msg: msg,
 		}
 		if ok {

@@ -2,7 +2,6 @@ package rubik
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -29,9 +28,9 @@ const (
 // 	return app.url
 // }
 
-// StackTraceTemplate is the data binded to errors.html templated rendered by
+// stackTraceTemplate is the data binded to errors.html templated rendered by
 // rubik server
-type StackTraceTemplate struct {
+type stackTraceTemplate struct {
 	Msg   string
 	Stack []string
 }
@@ -60,13 +59,6 @@ func Render(btype ByteType, vars interface{}, paths ...string) ByteResponse {
 		}
 	} else if len(paths) > 1 {
 		for _, path := range paths {
-			if _, err := os.Stat(templPath); os.IsNotExist(err) {
-				msg := fmt.Sprintf("FileNotFoundError: path %s does not exist", templPath)
-				return ByteResponse{
-					Status: http.StatusInternalServerError,
-					Error:  errors.New(msg),
-				}
-			}
 			allPaths = append(allPaths, filepath.Join("templates", path))
 		}
 		multiple = true
