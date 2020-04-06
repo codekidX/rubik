@@ -20,8 +20,9 @@ type Block interface {
 // the ability to decode the config that it needs for
 // only this block of code to work
 type App struct {
-	BlockName string
-	app       rubik
+	blockName  string
+	app        rubik
+	CurrentURL string
 }
 
 // Decode ..injects your named configs
@@ -30,7 +31,7 @@ func (sb *App) Decode(name string, target interface{}) error {
 	// check for target is pointer or not
 	val := sb.app.intermConfig.Get(name)
 	msg := fmt.Sprintf("AppDecodeError: block =[ %s ]= requires you to specify "+
-		"%s object inside your config/.toml file", sb.BlockName, name)
+		"%s object inside your config/.toml file", sb.blockName, name)
 	if val == nil {
 		return errors.New(msg)
 	}
