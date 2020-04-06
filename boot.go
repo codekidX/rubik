@@ -209,13 +209,13 @@ func bootBlocks() error {
 					return errors.New("Value for message passer block must implement the " +
 						"MessagePasser interface")
 				}
-				err := v.OnAttach(&App{app: *app, BlockName: k})
+				err := v.OnAttach(&App{app: *app, blockName: k, CurrentURL: app.url})
 				if err != nil {
 					return err
 				}
 				app.comm[k] = msgPasser
 			} else {
-				err := v.OnAttach(&App{app: *app, BlockName: k})
+				err := v.OnAttach(&App{app: *app, blockName: k, CurrentURL: app.url})
 				if err != nil {
 					return err
 				}
