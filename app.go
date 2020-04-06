@@ -279,6 +279,11 @@ func Load(config interface{}) error {
 	// before loading anything to interm config mark notation map as not editable
 	app.intermConfig.IsEditable(false)
 
+	port, _ := app.intermConfig.Get("port").(string)
+	// TODO: think about this line, how do we know if we want it to
+	// run on machine ip or on the localhost?
+	app.url = "127.0.0.1" + port
+
 	return nil
 }
 
