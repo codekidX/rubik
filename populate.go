@@ -76,6 +76,10 @@ func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 		httpRequest, err = http.NewRequest(req.requestType, fullURL, nil)
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
 	if len(req.headers) > 0 {
 		for k, v := range req.headers {
 			httpRequest.Header.Set(k, v[0])
@@ -83,11 +87,6 @@ func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 	}
 
 	httpRequest = httpRequest.WithContext(req.context)
-
-	if err != nil {
-		return nil, err
-	}
-
 	httpRequest.Header.Set(headerUserAgent, clientAgent)
 
 	return httpRequest, nil
