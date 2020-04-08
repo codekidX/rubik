@@ -14,9 +14,12 @@ import (
 	"github.com/rubikorg/rubik/pkg"
 )
 
-// notFoundHandler is rubik's not found route renderer
+// notFoundHandler implements http.Handler interface
+// it shows the error response as stacktrace and
+// decieds not to show on non-production env
 type notFoundHandler struct{}
 
+// ServeHTTP is the implementation method of http.Handler
 func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	stt := stackTraceTemplate{
 		Msg: "Route " + r.URL.Path + " not found",
@@ -36,6 +39,17 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
+// boot is the bootstrapper function of rubik server
+// it helps to take care of building all the functional
+// component and initializing them to make a working
+// server
+// The sequence of booting is as follows:
+//
+// 1. bootMessageListener()
+// 2. handle404Response()
+// 3. bootBlocks()
+// 4. bootStatic()
+// 5. bootRoutes()
 func boot(isREPLMode bool) error {
 	go bootMessageListener()
 
@@ -79,7 +93,7 @@ func boot(isREPLMode bool) error {
 				// DANGER: code should depend upon route.Method
 				app.mux.GET(finalPath,
 					func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-
+						defer req.Body.Close()
 						reqCtx := RequestContext{
 							Request: req,
 							Ctx:     make(map[string]interface{}),
@@ -188,20 +202,29 @@ func boot(isREPLMode bool) error {
 	return nil
 }
 
+// writeResponse is a generic utility function to set the response
+// of a request in the normalized state with []byte as parameter
+// and set the incoming type with the status
 func writeResponse(w http.ResponseWriter, status int, contype string, body []byte) {
 	w.Header().Set(Content.Header, contype)
 	w.WriteHeader(status)
 	w.Write(body)
 }
 
+// bootBlocks initializes all the attached blocks and calls
+// the onAttach method to boot it's requirements.
+// A block is said to be attached only if the return error
+// value is nil
 func bootBlocks() error {
 	if len(app.blocks) > 0 {
 		for k, v := range app.blocks {
 			// Attaching inherent blocks to the rubik server
-			// Inherent blocks are nothing but blocks that are intended
-			// to be attached to the core functionality of rubik server
-			// Rather than attaching a block as an extended functionality
-			// you can access these blocks as a part of core API
+			// Inherent blocks are nothing but blocks that
+			// are intended to be attached to the core
+			// functionality of rubik server
+			// Rather than attaching a block as an extended
+			// functionality you can access these blocks
+			// as a part of core API
 			genBlockName := strings.ToLower(k)
 			if strings.Contains(genBlockName, "messagepasser") {
 				msgPasser, ok := v.(Communicator)
@@ -229,6 +252,10 @@ func bootBlocks() error {
 	return nil
 }
 
+// bootStatic boots the ServeFiles handler httprouter
+// this functions boots /static route as its index
+// and points to the static directory inside this
+// project
 func bootStatic() {
 	if _, err := os.Stat(pkg.GetStaticFolderPath()); err == nil {
 		app.mux.ServeFiles("/static/*filepath", http.Dir("./static"))
@@ -236,6 +263,14 @@ func bootStatic() {
 	}
 }
 
+// bootGuard is a method that verifies the following this
+//
+// -> calls guard.Require() to check if the config
+// requirement is met by the implementer
+// -> calls guard.GetRealm() to check if the client
+// needs to be aware of an authorization method or not
+// -> calls guard.Authorize() only after evaluating
+// both the above function
 func bootGuard(
 	w http.ResponseWriter, g AuthorizationGuard, placebo *App, headers http.Header) error {
 	if g.Require() != "" {
@@ -258,6 +293,7 @@ func bootMiddlewares() {}
 
 func bootController() {}
 
+// handle404Response boots the notfounfHandler as mux.NotFound Handler
 func handle404Response() {
 	if app.mux.NotFound == nil {
 		app.mux.NotFound = notFoundHandler{}
@@ -266,6 +302,9 @@ func handle404Response() {
 
 func handleResponse(response interface{}) {}
 
+// TODO: make this cleaner and better
+// this method is used to write error stacktrace response if env is
+// dev and not if otherwise
 func handleErrorResponse(err error, writer http.ResponseWriter, rc *RequestContext) {
 	isDevEnv := true
 	if !(app.currentEnv == "" || app.currentEnv == "development") {
@@ -303,6 +342,9 @@ func handleErrorResponse(err error, writer http.ResponseWriter, rc *RequestConte
 	writer.Write([]byte(err.Error()))
 }
 
+// dispatchHooks just calls all the hooks passed as the argument
+// this is generally used to call before/after request hooks
+// and is intended to be executed as a goroutine
 func dispatchHooks(hooks []RequestHook, rc *RequestContext) {
 	if len(hooks) > 0 {
 		for _, h := range hooks {
@@ -311,6 +353,11 @@ func dispatchHooks(hooks []RequestHook, rc *RequestContext) {
 	}
 }
 
+// bootMessageListener scaffolds a reciever for inherent rubik channels
+// currently used channels for rubik message passing are
+//
+// 1. Dispatch,Message
+// 2. Dispatch.Error
 func bootMessageListener() {
 	select {
 	case msg := <-Dispatch.Message:
