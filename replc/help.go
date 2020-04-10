@@ -16,6 +16,11 @@ var allCommands = []cmd{
 		desc:  "creates a new rubik project",
 		usage: "okrubik create",
 	},
+	cmd{
+		name:  "run",
+		desc:  "runs project from your rubik workspace",
+		usage: "okrubik run",
+	},
 }
 
 var replCommands = []cmd{
