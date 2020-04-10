@@ -8,7 +8,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Block is a guideline for extended functionality in rubik
+// Block is an interface that can be implemented to provide
+// extended functionalities to rubik server
+// Think of it as a plugin which can be attached to the
+// rubik server and can be accessible throughout the
+// lifecycle of rubik server.
+//
+// A Block can also be thought of as a dependency injected
+// plugin and can be accessed in your controllers by
+// calling rubik.GetBlock('BLOCK_NAME').
+// Blocks requires you to implement a method called
+// OnAttach. This method is called during rubik server
+// bootstrapper is run and requires you to return an error
+// if any complexity arrises in for your block to function
 type Block interface {
 	OnAttach(*App) error
 }
