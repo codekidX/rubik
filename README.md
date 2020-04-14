@@ -8,10 +8,16 @@ efficient in constructing a block-based application instead of extensions. The f
 designed to be extremely extensible, meaning, any Go module can be attached to this server
 without the need of explicit dependency injection.
 
+
+### ToDo
+
+- [ ] ORM decision and migration structure
+- [ ] REPL for API interaction
+- [ ] Better Test Suite
+
 ### Core Goals
 
 - [x] Make Rubik fun to work with!
 - [ ] Provide a great tooling for Rubik
 - [ ] Make client-server development easier in Go
-- [ ] Easier inter-server communication
-- [ ] On-demand client server communication
+- [ ] Concurrent messgage passing
