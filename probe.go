@@ -5,20 +5,21 @@ import (
 	"time"
 )
 
-// GetTestClient returns a probed client for testing your rubik server
+// Probe returns a probed client for testing your rubik server
 //
 // Example:
 // 		var client *rubik.Client
 // 		func init() {
 //			routers.import()
-//			client = rubik.GetTestClient()
+//			client = rubik.Probe()
 // }
 //
 // 		func TestSomething(t *testing.T) {
 //			resp, err := client.Get("/")
 //			** TEST YOUR `resp` **
 //}
-func GetTestClient() *Client {
+func Probe() *Client {
 	s := httptest.NewServer(app.mux)
+	boot(false)
 	return NewClient(s.URL, time.Second*60)
 }

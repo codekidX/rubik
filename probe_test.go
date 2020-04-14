@@ -8,6 +8,11 @@ import (
 var probe *Client
 
 func init() {
+	initTestRouter()
+	probe = Probe()
+}
+
+func initTestRouter() {
 	indexRouter := Create("/")
 	i := Route{
 		Path:       "/",
@@ -15,8 +20,6 @@ func init() {
 	}
 	indexRouter.Add(i)
 	Use(indexRouter)
-	boot(false)
-	probe = GetTestClient()
 }
 
 func testIndexCtl(en interface{}) ByteResponse {
