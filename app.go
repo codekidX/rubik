@@ -164,14 +164,15 @@ func GetConfig() interface{} {
 
 // Attach a block to rubik tree
 func Attach(symbol string, b Block) {
-	if app.blocks[symbol] != nil {
+	name := strings.ToLower(symbol)
+	if app.blocks[name] != nil {
 		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists",
-			symbol, symbol)
+			symbol, name)
 		pkg.ErrorMsg(msg)
 		return
 	}
 
-	app.blocks[symbol] = b
+	app.blocks[name] = b
 }
 
 // GetBlock returns the block that is attached to rubik represented by the
