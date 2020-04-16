@@ -25,6 +25,7 @@
 storage/
 config/
 mycherry.go
+rubik.toml
 
 # vi swap files
 *.swp
