@@ -148,20 +148,20 @@ func downloadCall(url, target string) error {
 	resp, err := http.Get(url)
 
 	if err != nil {
-		return errors.New("CherryDownloadError: Cannot download file. Raw: " + err.Error())
+		return errors.New("DownloadError: Cannot download file. Raw: " + err.Error())
 	}
 	defer resp.Body.Close()
 
 	out, err := os.Create(target)
 
 	if err != nil {
-		return errors.New("CherryDownloadError: Cannot create target file. Raw: " + err.Error())
+		return errors.New("DownloadError: Cannot create target file. Raw: " + err.Error())
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return errors.New("CherryDownloadError: Cannot copy to target file. Raw: " + err.Error())
+		return errors.New("DownloadError: Cannot copy to target file. Raw: " + err.Error())
 	}
 	return nil
 }
