@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 )
@@ -33,8 +34,7 @@ func GetTemplateFolderPath() string {
 
 // GetStaticFolderPath returns the absolute static dir path
 func GetStaticFolderPath() string {
-	dir, _ := os.Getwd()
-	return dir + sep + "static"
+	return filepath.Join(".", "static")
 }
 
 // GetRubikConfigPath returns path of rubik config of current project

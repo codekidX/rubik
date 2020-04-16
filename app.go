@@ -144,9 +144,7 @@ type RouteInfo struct {
 
 // FromStorage returns the file bytes of a given fileName as response
 func FromStorage(fileName string) ByteResponse {
-	pwd, _ := os.Getwd()
-	var filePath = pwd + string(os.PathSeparator) + "storage" +
-		string(os.PathSeparator) + fileName
+	var filePath = filepath.Join(".", "storage", fileName)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return Failure(500, errors.New("FileNotFoundError: "+fileName+" does not exist."))
 	}
@@ -211,14 +209,11 @@ func Load(config interface{}) error {
 	// set the current env to app.currentEnv
 	app.currentEnv = env
 
-	pwd, _ := os.Getwd()
-	defaultConfigPath := pwd + string(os.PathSeparator) + "config" +
-		string(os.PathSeparator) + "default.toml"
+	defaultConfigPath := filepath.Join(".", "config", "default.toml")
 	envConfigFound := false
 
 	if env != "" {
-		envConfigPath = pwd + string(os.PathSeparator) + "config" +
-			sep + env + ".toml"
+		envConfigPath = filepath.Join(".", "config", env+".toml")
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
 			// do this with logger
