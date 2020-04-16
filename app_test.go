@@ -9,6 +9,13 @@ type testConfig struct {
 	Port string
 }
 
+type testBlock struct {
+}
+
+func (tb testBlock) OnAttach(app *App) error {
+	return nil
+}
+
 func TestLoad(t *testing.T) {
 	var someMap map[string]interface{}
 	err := Load(&someMap)
@@ -113,5 +120,40 @@ func TestEFunc(t *testing.T) {
 	err := E("some error")
 	if err.Error() != "some error" {
 		t.Error("E() did not save the error message properly")
+	}
+}
+
+func TestAttach(t *testing.T) {
+	Attach("TestBlock", testBlock{})
+	if len(app.blocks) == 0 {
+		t.Error("Attach() called but number of blocks inside rubik is still 0")
+	}
+
+	// check if blocks with same symbol cannot be attached
+	Attach("TestBlock", testBlock{})
+	if len(app.blocks) > 1 {
+		t.Error("Attach() called second time with same symbol and it got attached")
+	}
+}
+
+func TestGetBlock(t *testing.T) {
+	Attach("TestBlock", testBlock{})
+	_, ok := GetBlock("TestBlock").(testBlock)
+	if !ok {
+		t.Error("GetBlock() not returning proper block struct of type testBlock{}")
+	}
+}
+
+func TestBeforeRequest(t *testing.T) {
+	BeforeRequest(func(rc *RequestContext) {})
+	if len(beforeHooks) == 0 {
+		t.Error("BeforeRequest() not attached to beforeHooks slice")
+	}
+}
+
+func TestAfterRequest(t *testing.T) {
+	AfterRequest(func(rc *RequestContext) {})
+	if len(afterHooks) == 0 {
+		t.Error("AfterRequest() not attached to beforeHooks slice")
 	}
 }
