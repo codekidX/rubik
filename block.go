@@ -37,8 +37,10 @@ type App struct {
 	CurrentURL string
 }
 
-// Decode ..injects your named configs
-// sb curresponds to sandboxed app
+// Decode decodes the internal rubik server config into the struct
+// that you provide. It returns error if the config is not
+// unmarshalable OR there if there is no config
+// initialized by the given name parameter
 func (sb *App) Decode(name string, target interface{}) error {
 	// check for target is pointer or not
 	val := sb.app.intermConfig.Get(name)
