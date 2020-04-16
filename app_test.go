@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+type testConfig struct {
+	Port string
+}
+
 func TestLoad(t *testing.T) {
 	var someMap map[string]interface{}
 	err := Load(&someMap)
@@ -15,6 +19,19 @@ func TestLoad(t *testing.T) {
 	err = Load(someMap)
 	if err == nil {
 		t.Error("Load() did not throw an error when you passed a value type")
+	}
+}
+
+func TestGetConfig(t *testing.T) {
+	err := Load(&testConfig{})
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	conf := GetConfig()
+	_, ok := conf.(testConfig)
+	if !ok {
+		t.Error("GetConfig() not returning config of proper type as set while loading")
 	}
 }
 
@@ -50,6 +67,25 @@ func TestFromStorage(t *testing.T) {
 	}
 }
 
+func TestFromStorageUnreadableFile(t *testing.T) {
+	resp := FromStorage("nonreadable")
+	t.Log(resp.Error.Error())
+	if resp.Error == nil {
+		t.Error("FromStorage() did not return error if the file is not readable")
+	}
+}
+
+func TestFromStorageBytes(t *testing.T) {
+	resp := FromStorage("testFile")
+	if resp.Error != nil {
+		t.Error("FromStorage should not return an error because this file exists")
+	}
+
+	if string(resp.Data.([]byte)) != "test,haha" {
+		t.Error("FromStorage() did not read file properly")
+	}
+}
+
 func TestRestError(t *testing.T) {
 	_, err := RestError(400, "something")
 	if reflect.ValueOf(err).Type() != reflect.ValueOf(RestErrorMixin{}).Type() {
@@ -60,5 +96,22 @@ func TestRestError(t *testing.T) {
 	re, _ := err.(RestErrorMixin)
 	if re.Code != 400 || re.Message != "something" {
 		t.Error("RestError() does not contain proper data:", re)
+	}
+}
+
+func TestSetNotFoundHandler(t *testing.T) {
+	SetNotFoundHandler(notFoundHandler{})
+	// shoukd not panic
+	intr := recover()
+	if intr != nil {
+		err := intr.(error)
+		t.Error(err.Error())
+	}
+}
+
+func TestEFunc(t *testing.T) {
+	err := E("some error")
+	if err.Error() != "some error" {
+		t.Error("E() did not save the error message properly")
 	}
 }
