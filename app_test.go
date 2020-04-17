@@ -157,3 +157,15 @@ func TestAfterRequest(t *testing.T) {
 		t.Error("AfterRequest() not attached to beforeHooks slice")
 	}
 }
+
+func TestT(t *testing.T) {
+	tag := T("", "top")
+	if tag != "int:top" {
+		t.Error("T() does not return proper tag for internal message")
+	}
+
+	tag = T("Block", "top")
+	if tag != "Block:top" {
+		t.Error("T() does not return proper tag for Block message")
+	}
+}
