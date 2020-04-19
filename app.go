@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -128,6 +129,7 @@ type Route struct {
 	ResponseDeclarations map[int]string
 	JSON                 bool
 	Entity               interface{}
+	Guard                AuthorizationGuard
 	Middlewares          []Middleware
 	Validation           Validation
 	Controller           Controller
