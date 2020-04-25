@@ -122,21 +122,21 @@ func (c *Client) Delete(entity interface{}) (Response, error) {
 
 // Download method downloads file from an url from your specified Entity->Route
 // to TargetFilePath passed to the entity
-func (c *Client) Download(entity DownloadRequestEntity) error {
+func (c *Client) Download(entity DownloadRequestEntity) ([]byte, error) {
 	if entity.PointTo == "" {
 		errMsg := "DownloadRequestEntity must have a route initialized using Route() method"
-		return errors.New(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	// source
 	finalURL := c.url + safeRoutePath(entity.PointTo)
-	err := downloadCall(finalURL, entity.TargetFilePath)
+	raw, err := downloadCall(finalURL, entity.TargetFilePath)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return raw, nil
 }
 
 // Cancel ...
@@ -144,26 +144,31 @@ func (r *Payload) Cancel() {
 	r.cancel()
 }
 
-func downloadCall(url, target string) error {
+func downloadCall(url, target string) ([]byte, error) {
 	resp, err := http.Get(url)
 
 	if err != nil {
-		return errors.New("DownloadError: Cannot download file. Raw: " + err.Error())
+		return nil, errors.New("DownloadError: Cannot download file. Raw: " + err.Error())
 	}
 	defer resp.Body.Close()
 
 	out, err := os.Create(target)
 
 	if err != nil {
-		return errors.New("DownloadError: Cannot create target file. Raw: " + err.Error())
+		return nil, errors.New("DownloadError: Cannot create target file. Raw: " + err.Error())
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return errors.New("DownloadError: Cannot copy to target file. Raw: " + err.Error())
+		return nil, errors.New("DownloadError: Cannot copy to target file. Raw: " + err.Error())
 	}
-	return nil
+
+	b, err := ioutil.ReadFile(target)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func call(req *Payload) (Response, error) {
