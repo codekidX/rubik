@@ -27,6 +27,7 @@ func populateRequest(entity interface{}, c *Client) (*Payload, error) {
 	req.context = ctx
 
 	req.client = c.httpClient
+	req.agent = c.UserAgent
 	req.base = c.url
 
 	return &req, nil
@@ -87,7 +88,12 @@ func populateHTTPRequest(req *Payload, fullURL string) (*http.Request, error) {
 	}
 
 	httpRequest = httpRequest.WithContext(req.context)
-	httpRequest.Header.Set(headerUserAgent, clientAgent)
+
+	if req.agent == "" {
+		httpRequest.Header.Set(headerUserAgent, clientAgent)
+	} else {
+		httpRequest.Header.Set(headerUserAgent, req.agent)
+	}
 
 	return httpRequest, nil
 }

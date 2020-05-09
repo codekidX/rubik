@@ -25,6 +25,7 @@ type Client struct {
 	JWTSecret   string
 	BasicSecret string
 	BearerName  string
+	UserAgent   string
 }
 
 // Response is a struct that is returned by every client after
@@ -67,6 +68,7 @@ type Payload struct {
 	responseType interface{}
 	cancel       context.CancelFunc
 	context      context.Context
+	agent        string
 }
 
 // NewClient creates a new instance of ink client
