@@ -35,6 +35,7 @@ type App struct {
 	blockName  string
 	app        rubik
 	CurrentURL string
+	RouteTree
 }
 
 // Decode decodes the internal rubik server config into the struct

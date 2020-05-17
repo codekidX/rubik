@@ -29,8 +29,13 @@ var app = &rubik{
 		CanLog: true,
 	},
 	blocks:      make(map[string]Block),
+	afterBlocks: make(map[string]Block),
 	msgRegistry: make(map[string]rx),
 	comm:        make(map[string]Communicator),
+	routeTree: RouteTree{
+		RouterList: make(map[string]string),
+		Routes:     []RouteInfo{},
+	},
 }
 
 var blocks = make(map[string]interface{})
@@ -89,8 +94,9 @@ type rubik struct {
 	url          string
 	mux          *httprouter.Router
 	blocks       map[string]Block
+	afterBlocks  map[string]Block
 	routers      []Router
-	routeInfo    []RouteInfo
+	routeTree    RouteTree
 	comm         map[string]Communicator
 	msgRegistry  map[string]rx
 }
@@ -99,14 +105,14 @@ type rubik struct {
 type Request struct {
 	Raw            *http.Request
 	Params         httprouter.Params
-	ResponseHeader Values
+	ResponseHeader http.Header
 	app            *rubik
 	entity         interface{}
 }
 
-// GetRouteInfo returns a list of loaded routes in rubik
-func (req Request) GetRouteInfo() []RouteInfo {
-	return req.app.routeInfo
+// GetRouteTree returns a list of loaded routes in rubik
+func (req Request) GetRouteTree() RouteTree {
+	return req.app.routeTree
 }
 
 // Config returns the configuration of your server  for a specific accessor
@@ -135,12 +141,19 @@ type Route struct {
 	Controller           Controller
 }
 
+type RouteTree struct {
+	RouterList map[string]string
+	Routes     []RouteInfo
+}
+
 // RouteInfo ...
 type RouteInfo struct {
 	Path        string
 	Description string
+	BelongsTo   string
 	Entity      interface{}
 	IsJSON      bool
+	Method      string
 	Responses   map[int]string
 }
 
@@ -175,6 +188,19 @@ func Attach(symbol string, b Block) {
 	}
 
 	app.blocks[name] = b
+}
+
+// AttachAfter attaches blocks after boot sequence of routes are complete
+func AttachAfter(symbol string, b Block) {
+	name := strings.ToLower(symbol)
+	if app.afterBlocks[name] != nil {
+		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists",
+			symbol, name)
+		pkg.ErrorMsg(msg)
+		return
+	}
+
+	app.afterBlocks[name] = b
 }
 
 // GetBlock returns the block that is attached to rubik represented by the

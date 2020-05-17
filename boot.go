@@ -55,7 +55,7 @@ func boot(isREPLMode bool) error {
 
 	if !isREPLMode {
 		handle404Response()
-		err := bootBlocks()
+		err := bootBlocks(app.blocks)
 		if err != nil {
 			pkg.ErrorMsg(err.Error())
 			return err
@@ -68,9 +68,23 @@ func boot(isREPLMode bool) error {
 	var errored bool
 	// write the boot sequence of the server
 	for _, router := range app.routers {
+		// insert in tree
+		app.routeTree.RouterList[strings.ReplaceAll(router.basePath, "/", "")] = router.Description
+
 		for index := 0; index < len(router.routes); index++ {
 			route := router.routes[index]
 			finalPath := safeRouterPath(router.basePath) + safeRoutePath(route.Path)
+
+			// insert in tree
+			rinfo := RouteInfo{
+				BelongsTo:   strings.ReplaceAll(router.basePath, "/", ""),
+				Entity:      route.Entity,
+				Description: route.Description,
+				Path:        finalPath,
+				Method:      route.Method,
+				Responses:   route.ResponseDeclarations,
+			}
+			app.routeTree.Routes = append(app.routeTree.Routes, rinfo)
 
 			if !isREPLMode {
 				pkg.DebugMsg("Booting => " + finalPath)
@@ -89,110 +103,127 @@ func boot(isREPLMode bool) error {
 				}
 			}
 
+			handler := func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+				defer req.Body.Close()
+				reqCtx := RequestContext{
+					Request: req,
+					Ctx:     make(map[string]interface{}),
+				}
+
+				var en interface{}
+				if route.Entity != nil {
+					var err error
+					en, err = inject(req, ps, route.Entity, route.Validation)
+					if err != nil {
+						// TODO: injection error must be 400 bad request
+						handleErrorResponse(err, writer, &reqCtx)
+						return
+					}
+				}
+
+				go dispatchHooks(beforeHooks, &reqCtx)
+
+				// TODO: this is something i need to think about after addding the
+				// speculate.go as the middleware response also needs tp be
+				// speculated
+				if len(route.Middlewares) > 0 {
+					fmt.Println("mw injection")
+					for _, m := range route.Middlewares {
+						r := Request{
+							Raw:            req,
+							Params:         ps,
+							ResponseHeader: writer.Header(),
+						}
+						intf := m(r)
+						fmt.Println(intf)
+					}
+				}
+
+				var resp interface{}
+				bresp := route.Controller(en)
+
+				// set values in request context
+				reqCtx.Status = bresp.Status
+
+				// check if error response
+				if bresp.Status != http.StatusOK {
+					rem := RestErrorMixin{
+						Code:    bresp.Status,
+						Message: bresp.Error.Error(),
+					}
+
+					if bresp.OfType == Type.JSON {
+						b, _ := json.Marshal(rem)
+						writeResponse(writer, bresp.Status, Content.JSON, b)
+					} else {
+						writeResponse(writer, bresp.Status, Content.Text,
+							[]byte(rem.Message))
+					}
+					reqCtx.Response = rem
+				} else {
+					resp = bresp.Data
+
+					switch bresp.OfType {
+					case Type.HTML:
+						s, _ := resp.(string)
+						writeResponse(writer, bresp.Status, Content.HTML, []byte(s))
+						break
+					case Type.Text:
+						s, _ := resp.(string)
+						writeResponse(writer, bresp.Status, Content.Text, []byte(s))
+						break
+					case Type.JSON:
+						b, _ := json.Marshal(resp)
+						writeResponse(writer, bresp.Status, Content.JSON, b)
+						break
+					case Type.templateHTML, Type.templateText:
+						var conType = Content.HTML
+						if bresp.OfType == Type.templateText {
+							conType = Content.Text
+						}
+
+						b, _ := bresp.Data.([]byte)
+						writeResponse(writer, bresp.Status, conType, b)
+						break
+					case Type.Bytes:
+						b, _ := resp.([]byte)
+						// TODO: write something about this coersion error
+						// if !ok {
+						// }
+						// TODO: check how to set header for a file byte body
+						writeResponse(writer, bresp.Status, Content.Text, b)
+						break
+					default:
+						return
+					}
+
+					reqCtx.Response = bresp.Data
+				}
+
+				go dispatchHooks(afterHooks, &reqCtx)
+			}
+
 			if route.Controller != nil {
-				// DANGER: code should depend upon route.Method
-				app.mux.GET(finalPath,
-					func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-						defer req.Body.Close()
-						reqCtx := RequestContext{
-							Request: req,
-							Ctx:     make(map[string]interface{}),
-						}
-
-						var en interface{}
-						if route.Entity != nil {
-							var err error
-							en, err = inject(req, ps, route.Entity, route.Validation)
-							if err != nil {
-								// TODO: injection error must be 400 bad request
-								handleErrorResponse(err, writer, &reqCtx)
-								return
-							}
-						}
-
-						go dispatchHooks(beforeHooks, &reqCtx)
-
-						// TODO: this is something i need to think about after addding the
-						// speculate.go as the middleware response also needs tp be
-						// speculated
-						if len(route.Middlewares) > 0 {
-							fmt.Println("mw injection")
-							for _, m := range route.Middlewares {
-								r := Request{
-									Raw:    req,
-									Params: ps,
-								}
-								intf := m(r)
-								fmt.Println(intf)
-							}
-						}
-
-						var resp interface{}
-						bresp := route.Controller(en)
-
-						// set values in request context
-						reqCtx.Status = bresp.Status
-
-						// check if error response
-						if bresp.Status != http.StatusOK {
-							rem := RestErrorMixin{
-								Code:    bresp.Status,
-								Message: bresp.Error.Error(),
-							}
-
-							if bresp.OfType == Type.JSON {
-								b, _ := json.Marshal(rem)
-								writeResponse(writer, bresp.Status, Content.JSON, b)
-							} else {
-								writeResponse(writer, bresp.Status, Content.Text,
-									[]byte(rem.Message))
-							}
-							reqCtx.Response = rem
-						} else {
-							resp = bresp.Data
-
-							switch bresp.OfType {
-							case Type.HTML:
-								s, _ := resp.(string)
-								writeResponse(writer, bresp.Status, Content.HTML, []byte(s))
-								break
-							case Type.Text:
-								s, _ := resp.(string)
-								writeResponse(writer, bresp.Status, Content.Text, []byte(s))
-								break
-							case Type.JSON:
-								b, _ := json.Marshal(resp)
-								writeResponse(writer, bresp.Status, Content.JSON, b)
-								break
-							case Type.templateHTML, Type.templateText:
-								var conType = Content.HTML
-								if bresp.OfType == Type.templateText {
-									conType = Content.Text
-								}
-
-								b, _ := bresp.Data.([]byte)
-								writeResponse(writer, bresp.Status, conType, b)
-								break
-							case Type.Bytes:
-								b, _ := resp.([]byte)
-								// TODO: write something about this coersion error
-								// if !ok {
-								// }
-								// TODO: check how to set header for a file byte body
-								writeResponse(writer, bresp.Status, Content.Text, b)
-								break
-							default:
-								return
-							}
-
-							reqCtx.Response = bresp.Data
-						}
-
-						go dispatchHooks(afterHooks, &reqCtx)
-					})
+				if route.Method == "" {
+					app.mux.GET(finalPath, handler)
+				} else if !strings.Contains(route.Method, "|") {
+					app.mux.Handle(route.Method, finalPath, handler)
+				} else {
+					methods := strings.Split(route.Method, "|")
+					for _, m := range methods {
+						app.mux.Handle(m, finalPath, handler)
+					}
+				}
 			} else {
 				pkg.WarnMsg("ROUTE_NOT_BOOTED: No controller assigned for route: " + finalPath)
 			}
+		}
+	}
+
+	if !isREPLMode {
+		err := bootBlocks(app.afterBlocks)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -215,9 +246,9 @@ func writeResponse(w http.ResponseWriter, status int, contype string, body []byt
 // the onAttach method to boot it's requirements.
 // A block is said to be attached only if the return error
 // value is nil
-func bootBlocks() error {
-	if len(app.blocks) > 0 {
-		for k, v := range app.blocks {
+func bootBlocks(blockList map[string]Block) error {
+	if len(blockList) > 0 {
+		for k, v := range blockList {
 			// Attaching inherent blocks to the rubik server
 			// Inherent blocks are nothing but blocks that
 			// are intended to be attached to the core
@@ -226,19 +257,24 @@ func bootBlocks() error {
 			// functionality you can access these blocks
 			// as a part of core API
 			genBlockName := strings.ToLower(k)
+			sb := &App{
+				app: *app, blockName: k,
+				CurrentURL: app.url,
+				RouteTree:  app.routeTree,
+			}
 			if strings.Contains(genBlockName, "messagepasser") {
 				msgPasser, ok := v.(Communicator)
 				if !ok {
 					return errors.New("Value for message passer block must implement the " +
 						"MessagePasser interface")
 				}
-				err := v.OnAttach(&App{app: *app, blockName: k, CurrentURL: app.url})
+				err := v.OnAttach(sb)
 				if err != nil {
 					return err
 				}
 				app.comm[k] = msgPasser
 			} else {
-				err := v.OnAttach(&App{app: *app, blockName: k, CurrentURL: app.url})
+				err := v.OnAttach(sb)
 				if err != nil {
 					return err
 				}

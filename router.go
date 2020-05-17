@@ -2,9 +2,10 @@ package rubik
 
 // Router is used to hold all your rubik routes together
 type Router struct {
-	basePath   string
-	routes     []Route
-	Middleware []Middleware
+	basePath    string
+	routes      []Route
+	Middleware  []Middleware
+	Description string
 }
 
 // Add injects a cherry.Route definition to the main http server instance
