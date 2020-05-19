@@ -1,7 +1,6 @@
 package rubik
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -57,7 +56,10 @@ type FileStore struct {
 func (s StorageContainer) Access(name string) (FileStore, error) {
 	storeFolder := filepath.Join(s.path, name)
 	if f, _ := os.Stat(storeFolder); f == nil {
-		return FileStore{}, errors.New("No such container.")
+		err := os.Mkdir(storeFolder, 0755)
+		if err != nil {
+			return FileStore{}, err
+		}
 	}
 	return FileStore{Name: name, fullPath: storeFolder}, nil
 }
