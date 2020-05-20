@@ -323,6 +323,12 @@ func Use(router Router) {
 	app.routers = append(app.routers, router)
 }
 
+func UseRoute(route Route) {
+	router := Router{basePath: "/"}
+	router.Add(route)
+	app.routers = append(app.routers, router)
+}
+
 // SetNotFoundHandler sets custom handler for 404
 func SetNotFoundHandler(h http.Handler) {
 	app.mux.NotFound = h
