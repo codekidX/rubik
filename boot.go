@@ -68,23 +68,30 @@ func boot(isREPLMode bool) error {
 	var errored bool
 	// write the boot sequence of the server
 	for _, router := range app.routers {
-		// insert in tree
-		app.routeTree.RouterList[strings.ReplaceAll(router.basePath, "/", "")] = router.Description
+		if !strings.Contains(router.basePath, "rubik") {
+			// insert in tree
+			app.routeTree.RouterList[strings.ReplaceAll(router.basePath, "/", "")] =
+				router.Description
+		}
 
 		for index := 0; index < len(router.routes); index++ {
 			route := router.routes[index]
 			finalPath := safeRouterPath(router.basePath) + safeRoutePath(route.Path)
 
-			// insert in tree
-			rinfo := RouteInfo{
-				BelongsTo:   strings.ReplaceAll(router.basePath, "/", ""),
-				Entity:      route.Entity,
-				Description: route.Description,
-				Path:        finalPath,
-				Method:      route.Method,
-				Responses:   route.ResponseDeclarations,
+			// only add route tree if rubik is not present in name
+			// reserved for official internal routes
+			if !strings.Contains(router.basePath, "rubik") {
+				// insert in tree
+				rinfo := RouteInfo{
+					BelongsTo:   strings.ReplaceAll(router.basePath, "/", ""),
+					Entity:      route.Entity,
+					Description: route.Description,
+					Path:        finalPath,
+					Method:      route.Method,
+					Responses:   route.ResponseDeclarations,
+				}
+				app.routeTree.Routes = append(app.routeTree.Routes, rinfo)
 			}
-			app.routeTree.Routes = append(app.routeTree.Routes, rinfo)
 
 			if !isREPLMode {
 				pkg.DebugMsg("Booting => " + finalPath)
