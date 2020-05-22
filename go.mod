@@ -2,8 +2,6 @@ module github.com/rubikorg/rubik
 
 go 1.12
 
-replace github.com/rubikorg/blocks => ../blocks
-
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/julienschmidt/httprouter v1.3.0
