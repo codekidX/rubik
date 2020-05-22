@@ -91,10 +91,10 @@ func boot(isREPLMode bool) error {
 					Responses:   route.ResponseDeclarations,
 				}
 				app.routeTree.Routes = append(app.routeTree.Routes, rinfo)
-			}
 
-			if !isREPLMode {
-				pkg.DebugMsg("Booting => " + finalPath)
+				if !isREPLMode {
+					pkg.DebugMsg("Booting => " + finalPath)
+				}
 			}
 
 			if route.Entity != nil {

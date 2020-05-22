@@ -11,17 +11,19 @@ import (
 type Project struct {
 	Name         string `toml:"name"`
 	Path         string `toml:"path"`
-	Watchable    bool   `toml:"watchable"`
-	Communicable bool   `toml:"communicable"`
+	Watchable    bool   `toml:"watch"`
+	Communicable bool   `toml:"communicate"`
 }
 
 // Config is the main config for your rubik runtime
 // this is declared inside a rubik.toml file
 type Config struct {
 	ProjectName string `toml:"name"`
+	Module      string `toml:"module"`
 	IsFlat      bool   `toml:"flat"`
 	Log         bool
-	App         []Project `toml:"app"`
+	App         []Project                    `toml:"app"`
+	X           map[string]map[string]string `toml:"x"`
 }
 
 var sep = string(os.PathSeparator)
