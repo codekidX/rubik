@@ -11,9 +11,8 @@ without the need of explicit dependency injection.
 
 ### ToDo
 
-- [ ] ORM decision and migration structure
 - [ ] REPL for API interaction
-- [ ] Better Test Suite
+- [ ] Rubik Test Suite
 
 ### Core Goals
 
