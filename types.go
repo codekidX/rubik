@@ -166,7 +166,7 @@ func (val Values) Set(key string, value interface{}) {
 
 // File used by ink to embbed file
 type File struct {
-	Path     string
-	OSFile   *os.File
-	Metadata interface{}
+	Path   string
+	OSFile *os.File
+	Raw    []byte
 }
