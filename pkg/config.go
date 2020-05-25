@@ -66,7 +66,7 @@ func MakeAndGetCacheDirPath() string {
 	pwd, _ := os.UserHomeDir()
 	path := pwd + sep + ".rubik"
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.MkdirAll(path, os.ModeDir)
+		os.MkdirAll(path, 0755)
 	}
 	return path
 }
