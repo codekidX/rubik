@@ -31,6 +31,11 @@ var allCommands = []cmd{
 		desc:  "generates boilerplate code for your rubik project",
 		usage: "okrubik gen router",
 	},
+	{
+		name:  "upgrade",
+		desc:  "upgrades project modules || `self` option upgrade itself",
+		usage: "okrubik upgrade [self]",
+	},
 }
 
 var replCommands = []cmd{
