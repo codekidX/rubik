@@ -86,6 +86,18 @@ func (fs FileStore) Get(file string) []byte {
 	return b
 }
 
+// GetFile returns pointer to os.File for passing it into the rubikClient
+// using File{}.OSFile = return value of this function
+// Other usage may be to obtain file metadata stored
+func (fs FileStore) GetFile(file string) *os.File {
+	outFile := filepath.Join(fs.fullPath, file)
+	f, err := os.Open(outFile)
+	if err != nil {
+		return nil
+	}
+	return f
+}
+
 // Put a file inside this FileStore given the content
 // as parameter
 func (fs FileStore) Put(file string, content []byte) error {
