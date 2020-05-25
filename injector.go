@@ -51,8 +51,12 @@ func inject(req *http.Request,
 		for k, v := range encs {
 			body[k] = v[0]
 		}
-	// DANGER: need to evalueate multipart form data
+	// TODO: need to evalueate multipart form data
 	case Content.Multipart:
+		err := req.ParseMultipartForm(32 << 20)
+		if err != nil {
+			return nil, err
+		}
 		break
 	}
 
@@ -89,7 +93,7 @@ func inject(req *http.Request,
 				}
 
 			} else {
-				if isOneOf(tag, "query", "body", "form") {
+				if isOneOf(tag, "query", "body", "form", "param") {
 					transport = tag
 				} else {
 					transportKey = tag
@@ -110,6 +114,21 @@ func inject(req *http.Request,
 		case "body":
 			val = body[transportKey]
 			if (val == nil || val == "") && isRequired {
+				return nil, requiredError
+			}
+			break
+		case "form":
+			files := req.MultipartForm.File[transportKey]
+			if (files == nil || len(files) == 0) && isRequired {
+				return nil, requiredError
+			}
+			val = files
+			break
+		case "param":
+			paramKey := capitalize(strings.ToLower(transportKey))
+			fmt.Println(params, paramKey)
+			val = params[paramKey]
+			if val == "" && isRequired {
 				return nil, requiredError
 			}
 			break
