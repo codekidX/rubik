@@ -93,7 +93,7 @@ func boot(isREPLMode bool) error {
 				app.routeTree.Routes = append(app.routeTree.Routes, rinfo)
 
 				if !isREPLMode {
-					pkg.DebugMsg("Booting => " + finalPath)
+					pkg.BootMsg(finalPath)
 				}
 			}
 
@@ -287,7 +287,7 @@ func bootBlocks(blockList map[string]Block) error {
 				}
 			}
 
-			msg := fmt.Sprintf("=[ @(%s) ]= block attached", k)
+			msg := fmt.Sprintf("Attaching =[ @(%s) ]=", k)
 			msg = tint.Init().Exp(msg, tint.Cyan.Bold())
 			fmt.Println(msg)
 		}
@@ -302,7 +302,7 @@ func bootBlocks(blockList map[string]Block) error {
 func bootStatic() {
 	if _, err := os.Stat(pkg.GetStaticFolderPath()); err == nil {
 		app.mux.ServeFiles("/static/*filepath", http.Dir("./static"))
-		pkg.DebugMsg("Booting => /static")
+		pkg.BootMsg("/static")
 	}
 }
 

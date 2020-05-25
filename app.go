@@ -141,6 +141,8 @@ type Route struct {
 	Controller           Controller
 }
 
+// RouteTree represents your routes as a local map for
+// getting information about your routes
 type RouteTree struct {
 	RouterList map[string]string
 	Routes     []RouteInfo
@@ -323,6 +325,7 @@ func Use(router Router) {
 	app.routers = append(app.routers, router)
 }
 
+// UseRoute is like rubik.Use() but attaches your route to the index Router
 func UseRoute(route Route) {
 	router := Router{basePath: "/"}
 	router.Add(route)
