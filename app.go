@@ -332,6 +332,13 @@ func UseRoute(route Route) {
 	app.routers = append(app.routers, router)
 }
 
+// Redirect redirects your request to the given URL
+func Redirect(url string) ByteResponse {
+	return ByteResponse{
+		redirectURL: url,
+	}
+}
+
 // SetNotFoundHandler sets custom handler for 404
 func SetNotFoundHandler(h http.Handler) {
 	app.mux.NotFound = h

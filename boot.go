@@ -152,6 +152,11 @@ func boot(isREPLMode bool) error {
 				// set values in request context
 				reqCtx.Status = bresp.Status
 
+				if bresp.redirectURL != "" {
+					http.Redirect(writer, req, bresp.redirectURL, http.StatusFound)
+					return
+				}
+
 				// check if error response
 				if bresp.Status != http.StatusOK {
 					rem := RestErrorMixin{

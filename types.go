@@ -58,10 +58,11 @@ type MessagePasser struct {
 
 // ByteResponse is the response of rubik server
 type ByteResponse struct {
-	Status int
-	Data   interface{}
-	OfType ByteType
-	Error  error
+	Status      int
+	Data        interface{}
+	OfType      ByteType
+	Error       error
+	redirectURL string
 }
 
 // Validation is validation operations to be performed
