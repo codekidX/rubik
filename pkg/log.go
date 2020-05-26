@@ -39,6 +39,6 @@ func ErrorMsg(message string) {
 
 // BootMsg writes the booting message to stdout
 func BootMsg(message string) {
-	template := fmt.Sprintf("@(⇪) @(%s)", message)
+	template := fmt.Sprintf("@(⇪)	@(%s)", message)
 	fmt.Println(t.Exp(template, tint.Magenta, tint.White.Bold()))
 }

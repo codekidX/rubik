@@ -21,6 +21,7 @@ type Config struct {
 	ProjectName string `toml:"name"`
 	Module      string `toml:"module"`
 	IsFlat      bool   `toml:"flat"`
+	MaxProcs    int    `toml:"maxprocs"`
 	Log         bool
 	App         []Project                    `toml:"app"`
 	X           map[string]map[string]string `toml:"x"`

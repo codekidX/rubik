@@ -287,7 +287,7 @@ func bootBlocks(blockList map[string]Block) error {
 				}
 			}
 
-			msg := fmt.Sprintf("Attaching =[ @(%s) ]=", k)
+			msg := fmt.Sprintf("Attached =[ @(%s) ]=", k)
 			msg = tint.Init().Exp(msg, tint.Cyan.Bold())
 			fmt.Println(msg)
 		}
