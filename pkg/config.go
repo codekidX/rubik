@@ -74,7 +74,9 @@ func MakeAndGetCacheDirPath() string {
 
 // GetErrorHTMLPath ...
 func GetErrorHTMLPath() string {
-	return MakeAndGetCacheDirPath() + sep + "error.html"
+	cacheFolder := filepath.Join(MakeAndGetCacheDirPath(), "cache")
+	os.MkdirAll(cacheFolder, 0755)
+	return filepath.Join(cacheFolder, "error.html")
 }
 
 // OverrideValues writes over the source map with env map
