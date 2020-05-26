@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -337,6 +338,20 @@ func Redirect(url string) ByteResponse {
 	return ByteResponse{
 		redirectURL: url,
 	}
+}
+
+// Proxy does not redirect your current resource locator but
+// makes an internal GET call to the specified URL to serve
+// it's response as your own
+func Proxy(url string) ByteResponse {
+	cl := NewClient(url, time.Second*30)
+	en := BlankRequestEntity{}
+	en.PointTo = "@"
+	resp, err := cl.Get(en)
+	if err != nil {
+		return Failure(500, err)
+	}
+	return Success(resp.StringBody, Type.Text)
 }
 
 // SetNotFoundHandler sets custom handler for 404

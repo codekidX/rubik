@@ -36,7 +36,9 @@ func populateRequest(entity interface{}, c *Client) (*Payload, error) {
 func populateParamsAndQuery(req *Payload) (string, error) {
 	var pathWithParams = req.path
 
-	if !strings.HasPrefix(pathWithParams, "/") {
+	if pathWithParams == "@" {
+		pathWithParams = ""
+	} else if !strings.HasPrefix(pathWithParams, "/") {
 		pathWithParams = "/" + pathWithParams
 	}
 
