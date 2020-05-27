@@ -20,7 +20,7 @@ bug fixes beyond the grasps which needs to be fixed before it is **production re
 
 ### Quickstart
 
-- Install Rubik CLI
+- Install Rubik CLI _(supports Linux and OSX 64-bit versions only)_
 ```bash
 curl https://rubik.ashishshekar.com/install | sh
 ```
