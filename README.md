@@ -3,14 +3,18 @@
 </p>
 
 
-### Welcome to Rubik
+### Welcome to Rubik (alpha)
 
 Rubik is a efficient, scalable micro-framework for writing REST client and server-side applications. It provides a pluggable
 layer of abstraction over `net/http` and enables automation of development environment through extensive tooling.
 
+Even though the goal of Rubik is set it'll take a lot of time to achieve it, that being said you must
+not use this framework for any production use **yet**. There can be a lot of edge cases missed and 
+bug fixes beyond the grasps which needs to be fixed before it is **production ready**.
+
 ### Framework Components
 
-- Core _(this repository)
+- Core _(this repository)_
 - [CLI](https://github.com/rubikorg/okrubik)
 - [Blocks](https://github.com/rubikorg/blocks)
 
