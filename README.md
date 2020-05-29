@@ -43,17 +43,16 @@ okrubik run
 
 We encourage you to read this [Contributing to Rubik Guidelines](https://github.com/rubikorg/rubik/blob/master/CONTRIBUTING.md) for ensuring smooth development flow.
 
-### ToDo
-
-- [ ] REPL for API interaction
-- [ ] Rubik Test Suite
-
 ### Core Goals
 
 - [x] Make Rubik fun to work with!
 - [ ] Provide a great tooling for Rubik
 - [ ] Make client-server development easier in Go
 - [ ] Concurrent messgage passing
+
+### Things Rubik can't do yet
+
+Here is the [list](https://github.com/rubikorg/rubik/blob/master/_scripts/incomplete.md) of things that rubik can't do yet and needs fixing/development in these areas.
 
 ### License
 
