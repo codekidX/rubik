@@ -1,5 +1,6 @@
 # Things Rubik needs
 
+- Fully Covered API Documentation
 -  TLS
 - Session Manager
 - Default memory caching
