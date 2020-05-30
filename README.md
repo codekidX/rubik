@@ -39,6 +39,10 @@ okrubik run
 - [Project Structure](https://rubikorg.github.io/essentials/core-concepts/) _(alpha)_
 - API Documentation with [GoDoc](https://pkg.go.dev/github.com/rubikorg/rubik?tab=doc) _(alpha)_
 
+### Questions
+
+Ask by joining the [Mailing list](https://groups.google.com/forum/#!forum/rubikorg/new)
+
 ### Contributing
 
 We encourage you to read this [Contributing to Rubik Guidelines](https://github.com/rubikorg/rubik/blob/master/CONTRIBUTING.md) for ensuring smooth development flow.
