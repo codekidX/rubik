@@ -100,7 +100,7 @@ func TestMakeAndGetCacheDirPath2(t *testing.T) {
 
 func TestGetErrorHTMLPath(t *testing.T) {
 	home, _ := os.UserHomeDir()
-	correctPath := filepath.Join(home, ".rubik", "error.html")
+	correctPath := filepath.Join(home, ".rubik", "cache", "error.html")
 	p := GetErrorHTMLPath()
 	if p == "" || p != correctPath {
 		t.Error("GetErrorHTMLPath() did not return correct path. Path:", p)
