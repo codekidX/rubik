@@ -67,19 +67,6 @@ func TestUse(t *testing.T) {
 	}
 }
 
-func TestRestError(t *testing.T) {
-	_, err := RestError(400, "something")
-	if reflect.ValueOf(err).Type() != reflect.ValueOf(RestErrorMixin{}).Type() {
-		t.Error("RestError() did not return a RestErrorMixin")
-		return
-	}
-
-	re, _ := err.(RestErrorMixin)
-	if re.Code != 400 || re.Message != "something" {
-		t.Error("RestError() does not contain proper data:", re)
-	}
-}
-
 func TestSetNotFoundHandler(t *testing.T) {
 	SetNotFoundHandler(notFoundHandler{})
 	// shoukd not panic
