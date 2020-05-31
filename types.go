@@ -63,6 +63,9 @@ type ByteResponse struct {
 	OfType      ByteType
 	Error       error
 	redirectURL string
+	safeWrite   bool
+	handler     http.Handler
+	handlerFunc http.HandlerFunc
 }
 
 // Validation is validation operations to be performed
@@ -170,4 +173,25 @@ type File struct {
 	Path   string
 	OSFile *os.File
 	Raw    []byte
+}
+
+// RResponseWriter ...
+type RResponseWriter struct {
+	http.ResponseWriter
+	written bool
+	status  int
+	data    []byte
+}
+
+// WriteHeader ...
+func (w *RResponseWriter) WriteHeader(status int) {
+	w.status = status
+	w.written = true
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *RResponseWriter) Write(b []byte) (int, error) {
+	w.data = b
+	w.written = true
+	return w.ResponseWriter.Write(b)
 }

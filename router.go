@@ -4,7 +4,7 @@ package rubik
 type Router struct {
 	basePath    string
 	routes      []Route
-	Middleware  []Middleware
+	Middleware  []Controller
 	Description string
 }
 
@@ -15,20 +15,20 @@ func (ro *Router) Add(r Route) {
 
 // StorageRoutes create routes inside router that links your storage/fileName
 // to the Router base path
-func (ro *Router) StorageRoutes(fileNames ...string) {
-	for _, file := range fileNames {
-		storageCtl := getStorageCtl(file)
-		r := Route{
-			Method:     "GET",
-			Path:       safeRoutePath(file),
-			Controller: storageCtl,
-		}
-		ro.routes = append(ro.routes, r)
-	}
-}
+// func (ro *Router) StorageRoutes(fileNames ...string) {
+// 	for _, file := range fileNames {
+// 		storageCtl := getStorageCtl(file)
+// 		r := Route{
+// 			Method:     "GET",
+// 			Path:       safeRoutePath(file),
+// 			Controller: storageCtl,
+// 		}
+// 		ro.routes = append(ro.routes, r)
+// 	}
+// }
 
-func getStorageCtl(name string) Controller {
-	return func(entity interface{}) ByteResponse {
-		return FromStorage(name)
-	}
-}
+// func getStorageCtl(name string) Controller {
+// 	return func(entity interface{}) ByteResponse {
+// 		return FromStorage(name)
+// 	}
+// }
