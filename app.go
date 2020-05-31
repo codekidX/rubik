@@ -194,21 +194,6 @@ type RouteInfo struct {
 	Responses   map[int]string
 }
 
-// FromStorage returns the file bytes of a given fileName as response
-// func FromStorage(fileName string) ByteResponse {
-// 	var filePath = filepath.Join(".", "storage", fileName)
-// 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-// 		return Failure(500, errors.New("FileNotFoundError: "+fileName+" does not exist."))
-// 	}
-
-// 	b, err := ioutil.ReadFile(filePath)
-// 	if err != nil {
-// 		return Failure(500, err)
-// 	}
-
-// 	return Success(b, Type.Bytes)
-// }
-
 // GetConfig returns the injected config from the Load method
 func GetConfig() interface{} {
 	return app.config
@@ -502,11 +487,6 @@ func Run(args ...string) error {
 	return http.ListenAndServe(port, app.mux)
 }
 
-// RestError returns a json with the error code and the message
-func RestError(code int, message string) (interface{}, error) {
-	return nil, RestErrorMixin{Code: code, Message: message}
-}
-
 // Respond is a terminal function for rubik controller that sends byte response
 // it wraps around your arguments for better reading
 func (req *Request) Respond(data interface{}, ofType ...ByteType) {
@@ -550,10 +530,7 @@ func (req *Request) Throw(status int, err error, btype ...ByteType) {
 	case Type.JSON:
 		req.Writer.Header().Add(Content.Header, Content.JSON)
 		req.Writer.WriteHeader(status)
-		jsonErr := struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-		}{status, err.Error()}
+		jsonErr := RestErrorMixin{status, err.Error()}
 		json.NewEncoder(&req.Writer).Encode(&jsonErr)
 		break
 	}

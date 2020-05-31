@@ -67,32 +67,6 @@ func TestUse(t *testing.T) {
 	}
 }
 
-// func TestFromStorage(t *testing.T) {
-// 	resp := FromStorage("noSuchFile")
-// 	if resp.Error == nil {
-// 		t.Error("FromStorage() did not throw an error when it did not find the file")
-// 	}
-// }
-
-// func TestFromStorageUnreadableFile(t *testing.T) {
-// 	resp := FromStorage("nonreadable")
-// 	t.Log(resp.Error.Error())
-// 	if resp.Error == nil {
-// 		t.Error("FromStorage() did not return error if the file is not readable")
-// 	}
-// }
-
-// func TestFromStorageBytes(t *testing.T) {
-// 	resp := FromStorage("testFile")
-// 	if resp.Error != nil {
-// 		t.Error("FromStorage should not return an error because this file exists")
-// 	}
-
-// 	if string(resp.Data.([]byte)) != "test,haha" {
-// 		t.Error("FromStorage() did not read file properly")
-// 	}
-// }
-
 func TestRestError(t *testing.T) {
 	_, err := RestError(400, "something")
 	if reflect.ValueOf(err).Type() != reflect.ValueOf(RestErrorMixin{}).Type() {
