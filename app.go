@@ -403,7 +403,7 @@ func Proxy(url string) Controller {
 		cl := NewClient(url, time.Second*30)
 		en := BlankRequestEntity{}
 		en.PointTo = "@"
-		en.request.Header = req.Raw.Header
+		en.request = req.Raw
 		resp, err := cl.Get(en)
 		if err != nil {
 			req.Throw(500, err)
