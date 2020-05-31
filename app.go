@@ -21,7 +21,7 @@
 //			// this runs Rubik server on port: 8000
 // 			index := rubik.Route{
 // 				Path: "/",
-// 				Controller: func (d *r.Data) { d.Respond("This is a text response") },
+// 				Controller: func (req *r.Request) { req.Respond("This is a text response") },
 // 			}
 // 			rubik.UseRoute(index)
 // 			panic(r.Run())
@@ -38,6 +38,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -412,16 +413,20 @@ func Redirect(url string) ByteResponse {
 // Proxy does not redirect your current resource locator but
 // makes an internal GET call to the specified URL to serve
 // it's response as your own
-// func Proxy(url string) ByteResponse {
-// 	cl := NewClient(url, time.Second*30)
-// 	en := BlankRequestEntity{}
-// 	en.PointTo = "@"
-// 	resp, err := cl.Get(en)
-// 	if err != nil {
-// 		return Failure(500, err)
-// 	}
-// 	return Success(resp.StringBody, Type.Text)
-// }
+func Proxy(url string) Controller {
+	return func(req *Request) {
+		cl := NewClient(url, time.Second*30)
+		en := BlankRequestEntity{}
+		en.PointTo = "@"
+		en.request.Header = req.Raw.Header
+		resp, err := cl.Get(en)
+		if err != nil {
+			req.Throw(500, err)
+			return
+		}
+		req.Respond(resp.StringBody)
+	}
+}
 
 // SetNotFoundHandler sets custom handler for 404
 func SetNotFoundHandler(h http.Handler) {
