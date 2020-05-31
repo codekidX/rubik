@@ -490,8 +490,6 @@ func Run(args ...string) error {
 // Respond is a terminal function for rubik controller that sends byte response
 // it wraps around your arguments for better reading
 func (req *Request) Respond(data interface{}, ofType ...ByteType) {
-	req.Writer.WriteHeader(200)
-
 	var ty ByteType
 	if len(ofType) == 0 {
 		ty = Type.Text
@@ -501,16 +499,27 @@ func (req *Request) Respond(data interface{}, ofType ...ByteType) {
 
 	switch ty {
 	case Type.HTML:
+		s, ok := data.(string)
+		if !ok {
+			req.Throw(500, E("Error: cannot be written as string"))
+			return
+		}
+		writeResponse(&req.Writer, 200, Content.HTML, []byte(s))
 		break
 	case Type.Text:
 		s, ok := data.(string)
 		if !ok {
-			// TODO: common function  to write error
-			fmt.Fprint(&req.Writer, "Error: cannot be written as string")
+			req.Throw(500, E("Error: cannot be written as string"))
 			return
 		}
-		fmt.Fprint(&req.Writer, s)
+		writeResponse(&req.Writer, 200, Content.Text, []byte(s))
 		break
+	case Type.JSON:
+		req.Writer.WriteHeader(200)
+		err := json.NewEncoder(&req.Writer).Encode(data)
+		if err != nil {
+			req.Throw(500, err)
+		}
 	}
 }
 
