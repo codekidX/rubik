@@ -3,7 +3,6 @@ package rubik
 import (
 	"bytes"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 
@@ -48,15 +47,40 @@ func (rm RenderMixin) Result() []byte {
 
 // Render returns a mixin holding the data to be rendered on the web page or
 // sent over the wire
-func Render(btype ByteType, vars interface{}, paths ...string) ByteResponse {
+func Render(btype ByteType, vars interface{}, paths ...string) Controller {
+	return func(req *Request) {
+		bresp := RenderContent(btype, vars, paths...)
+		if bresp.Error != nil {
+			req.Throw(bresp.Status, bresp.Error)
+			return
+		}
+
+		var ty string
+		switch bresp.OfType {
+		case Type.HTML:
+			ty = Content.HTML
+			break
+		case Type.Text:
+			ty = Content.Text
+			break
+		case Type.JSON:
+			ty = Content.JSON
+			break
+		}
+
+		writeResponse(&req.Writer, bresp.Status, ty, bresp.Data.([]byte))
+	}
+}
+
+// RenderContent returns you the response bytes of the target paths that is going to be
+// written on the wire. It is an abstraction of Render method which is used as
+// a layered method inside Render method.
+func RenderContent(btype ByteType, vars interface{}, paths ...string) ByteResponse {
 	allPaths := []string{}
 	var templPath string
 	var multiple = false
 	if len(paths) == 0 {
-		return ByteResponse{
-			Status: http.StatusInternalServerError,
-			Error:  errors.New("No paths passed to Render method"),
-		}
+		return ByteResponse{Status: 500, Error: errors.New("No paths passed to Render method")}
 	} else if len(paths) > 1 {
 		for _, path := range paths {
 			allPaths = append(allPaths, filepath.Join("templates", path))
@@ -88,10 +112,7 @@ func Render(btype ByteType, vars interface{}, paths ...string) ByteResponse {
 	}
 
 	if err != nil {
-		return ByteResponse{
-			Status: http.StatusInternalServerError,
-			Error:  err,
-		}
+		return ByteResponse{Status: 500, Error: err}
 	}
 
 	return ByteResponse{Status: 200, Data: content, OfType: resType}
