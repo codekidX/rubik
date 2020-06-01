@@ -46,7 +46,7 @@ func GetRubikConfigPath() string {
 	return dir + sep + "rubik.toml"
 }
 
-// GetRubikConfig returns cherry config
+// GetRubikConfig returns Config: a structural representation of rubik.toml
 func GetRubikConfig() *Config {
 	configPath := GetRubikConfigPath()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {

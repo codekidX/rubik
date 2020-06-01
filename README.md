@@ -42,7 +42,7 @@ okrubik run
 ### Questions
 
 Co-ordination with suggestions, opinions and questions can be done through this  
-[Mailing list](https://groups.google.com/forum/#!forum/rubikorg/new)
+[Mailing list](https://groups.google.com/forum/#!forum/rubikorg)
 
 ### Contributing
 

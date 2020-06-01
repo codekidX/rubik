@@ -74,12 +74,12 @@ type Validation map[string]string
 
 // SessionManager is an interface contract that rubik.Session uses
 //
-// Anything abiding by this contract can
-type SessionManager interface {
-	Get(string) string
-	Set(string, string) error
-	Delete(string) bool
-}
+// // Anything abiding by this contract can
+// type SessionManager interface {
+// 	Get(string) string
+// 	Set(string, string) error
+// 	Delete(string) bool
+// }
 
 // Communicator interface is used to handle the service/driver that
 // rubik's inherent communication depends upon
@@ -124,9 +124,9 @@ type Entity struct {
 // GobEntity extends Entity and let's rubik know that this date is
 // present inside body of the request and you need to decode it using
 // GobDecoder
-type GobEntity struct {
-	Entity
-}
+// type GobEntity struct {
+// 	Entity
+// }
 
 // GetCtx ...
 // func (re RequestEntity) GetCtx() *Payload {
@@ -144,10 +144,10 @@ type DownloadRequestEntity struct {
 	TargetFilePath string
 }
 
-// Values that transcend url.Values with strict typing
+// Values that transcends url.Values allowing any type as value
 type Values map[string]interface{}
 
-// Encode ...
+// Encode converts the values into urlencoded strings
 func (val Values) Encode() string {
 	var qs = ""
 	var cnt = 0
@@ -163,7 +163,7 @@ func (val Values) Encode() string {
 	return qs
 }
 
-// Set ...
+// Set assigns a value for key `key` inside the rubik.Values
 func (val Values) Set(key string, value interface{}) {
 	val[key] = value
 }
@@ -175,7 +175,8 @@ type File struct {
 	Raw    []byte
 }
 
-// RResponseWriter ...
+// RResponseWriter is Rubik's response writer that implements http.ResponseWriter
+// and it's methods to provide additional functionalities related to Rubik.
 type RResponseWriter struct {
 	http.ResponseWriter
 	written bool
@@ -183,13 +184,15 @@ type RResponseWriter struct {
 	data    []byte
 }
 
-// WriteHeader ...
+// WriteHeader writes the http.Request's Header values to the wire and
+// sets the status given as the parameter
 func (w *RResponseWriter) WriteHeader(status int) {
 	w.status = status
 	w.written = true
 	w.ResponseWriter.WriteHeader(status)
 }
 
+// Write writes the response bytes b to the wire
 func (w *RResponseWriter) Write(b []byte) (int, error) {
 	w.data = b
 	w.written = true
