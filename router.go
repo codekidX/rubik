@@ -8,7 +8,7 @@ type Router struct {
 	Description string
 }
 
-// Add injects a cherry.Route definition to the main http server instance
+// Add injects a rubik.Route definition to the parent router from which it is called
 func (ro *Router) Add(r Route) {
 	ro.routes = append(ro.routes, r)
 }

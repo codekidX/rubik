@@ -86,12 +86,14 @@ type tracer interface {
 	StackTrace() errors.StackTrace
 }
 
-// RestErrorMixin type is used by rubik to show error in a same format
+// RestErrorMixin type is used by rubik when rubik.Throw is called for
+// writing error types as common JSON structure ocross Rubik server
 type RestErrorMixin struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
+// Error implements the errror interface of Go
 func (re RestErrorMixin) Error() string {
 	return re.Message
 }
@@ -157,12 +159,21 @@ func (req Request) Config(accessor string) interface{} {
 		msg := fmt.Sprintf("MiddlewareAccessorError: cannot access %s from "+
 			"project config", accessor)
 		pkg.ErrorMsg(msg)
+
 		return nil
 	}
+
 	return val
 }
 
-// Route is the culmination of
+// Route defines how a specific route route inside the Rubik server must behave.
+// Route collects all the information required for processing of a HTTP request
+// and performs a handler construction depending upon these values.
+//
+// There is a specific order in which handlers of Routes are constructed:
+//
+// [ Entity check --- Guard() --- Validation() --- []Middlewares()
+// --- Controller() ]
 type Route struct {
 	Path                 string
 	Method               string
@@ -183,7 +194,7 @@ type RouteTree struct {
 	Routes     []RouteInfo
 }
 
-// RouteInfo ...
+// RouteInfo is a flat structure for processing information about the routes
 type RouteInfo struct {
 	Path        string
 	Description string
@@ -206,6 +217,7 @@ func Attach(symbol string, b Block) {
 		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists",
 			symbol, name)
 		pkg.ErrorMsg(msg)
+
 		return
 	}
 
@@ -219,6 +231,7 @@ func AttachAfter(symbol string, b Block) {
 		msg := fmt.Sprintf("Block %s will not be attached on boot as symbol: %s exists",
 			symbol, name)
 		pkg.ErrorMsg(msg)
+
 		return
 	}
 
@@ -248,7 +261,6 @@ func AfterRequest(h RequestHook) {
 // Load method loads the config/RUBIK_ENV.toml file into the interface given
 func Load(config interface{}) error {
 	configKind := reflect.ValueOf(config).Kind()
-
 	if configKind != reflect.Ptr {
 		fmtmsg := "NonPointerValueError: Load() method requires pointer variable: %s"
 		msg := fmt.Sprintf(fmtmsg, configKind.String())
@@ -260,8 +272,8 @@ func Load(config interface{}) error {
 	var envMap map[string]interface{}
 	var envConfigPath string
 
-	env := os.Getenv("RUBIK_ENV")
 	// set the current env to app.currentEnv
+	env := os.Getenv("RUBIK_ENV")
 	app.currentEnv = env
 
 	defaultConfigPath := filepath.Join(".", "config", "default.toml")
@@ -325,7 +337,6 @@ func Load(config interface{}) error {
 	}
 
 	app.config = reflect.ValueOf(config).Elem().Interface()
-
 	// before loading anything to interm config mark notation map as not editable
 	app.intermConfig.IsEditable(false)
 
@@ -337,7 +348,10 @@ func Load(config interface{}) error {
 	return nil
 }
 
-// Create ...
+// Create retuens a rubik.Router instance for using and grouping routes.
+// It is generally used if you want to add routes under the same umbrella
+// prefix of this router. In Rubik it is used to group routes by domains/
+// responsibilities.
 func Create(index string) Router {
 	return Router{
 		basePath: index,
@@ -388,11 +402,20 @@ func UseIntermHandler(intermHandler func(http.Handler) http.Handler) Controller 
 	}
 }
 
-// Redirect redirects your request to the given URL
-func Redirect(url string) ByteResponse {
-	return ByteResponse{
-		redirectURL: url,
+// Redirect redirects your request to the given URL with status 302 by default.
+// If you want to provide a custom status for your redirection you can do that
+// by passing in a custom status like so:
+//
+// 		func someCtl(req *Request) {
+// 			req.Redirect("https://ashishshekar.com", http.StatusTemporaryRedirect)
+// 		}
+func (req *Request) Redirect(url string, customStatus ...int) {
+	redirectStatus := http.StatusFound
+	if len(customStatus) > 0 {
+		redirectStatus = customStatus[0]
 	}
+
+	http.Redirect(&req.Writer, req.Raw, url, redirectStatus)
 }
 
 // Proxy does not redirect your current resource locator but
@@ -401,6 +424,7 @@ func Redirect(url string) ByteResponse {
 func Proxy(url string) Controller {
 	return func(req *Request) {
 		cl := NewClient(url, time.Second*30)
+
 		en := BlankRequestEntity{}
 		en.PointTo = "@"
 		en.request = req.Raw
@@ -409,11 +433,12 @@ func Proxy(url string) Controller {
 			req.Throw(500, err)
 			return
 		}
+
 		req.Respond(resp.StringBody)
 	}
 }
 
-// SetNotFoundHandler sets custom handler for 404
+// SetNotFoundHandler sets custom 404 handler
 func SetNotFoundHandler(h http.Handler) {
 	app.mux.NotFound = h
 }
@@ -426,6 +451,7 @@ func Tx(blockName string, target string, body interface{}) {
 		pkg.ErrorMsg(fmt.Sprintf("No such trasmitor %s", blockName))
 		return
 	}
+
 	go app.comm[blockName].Send(target, body)
 }
 
@@ -446,11 +472,16 @@ func Rx(blockName string, topic string, entity interface{}, fn Controller) {
 	if blockName == "" {
 		name = "int"
 	}
+
 	tag := T(name, topic)
 	app.msgRegistry[tag] = rx{fn, entity}
 }
 
-// Run rubik server instance
+// Run will make sure all dependencies are met, resolves config and it's conflicts with
+// respect to the RUBIC_ENV passed while executing. It boots all your blocks, middlewares
+// message passing channels and port resolution; before starting the server.
+// If this method does not find PORT that is passed as the first argument or the
+// config/*RUBIC_ENV.toml then it startes at :8000.
 func Run(args ...string) error {
 	v, err := strconv.ParseFloat(Version, 32)
 	if v > 1.0 {
