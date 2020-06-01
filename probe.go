@@ -1,25 +1,68 @@
 package rubik
 
 import (
+	"io"
+	"net/http"
 	"net/http/httptest"
-	"time"
+	"os"
 )
 
-// Probe returns a probed client for testing your rubik server
+// TestProbe is an abstraction for easily testing your rubik routes
+type TestProbe struct {
+	app *rubik
+}
+
+// NewProbe returns a probe for testing your rubik server
 //
 // Example:
-// 		var client *rubik.Client
+// 		var probe rubik.TestProbe
 // 		func init() {
-//			routers.import()
-//			client = rubik.Probe()
-// }
+//			// pass the rubik.Router you want to test
+//			probe = rubik.NewProbe(index.Router)
+// 		}
 //
-// 		func TestSomething(t *testing.T) {
-//			resp, err := client.Get("/")
-//			** TEST YOUR `resp` **
-//}
-func Probe() *Client {
-	s := httptest.NewServer(app.mux)
+// 		func TestSomeRoute(t *testing.T) {
+//			// returns the *http.Request, *httptest.ResponseRecorder used inside the test
+//			req, rr := probe.Test(en)
+//			if rr.Result().StatusCode != 200 { /* Something is wrong */}
+//		}
+func NewProbe(ro Router) TestProbe {
+	os.Setenv("RUBIK_ENV", "test")
+	// boot only inits the routes of the rubik server
+	// without inititializing the app or running the
+	// server
+	Use(ro)
 	boot(false)
-	return NewClient(s.URL, time.Second*60)
+	p := TestProbe{}
+	p.app = app
+	return p
+}
+
+// Test a route with method, path to request, Entity (if used) and the controller to test
+func (p TestProbe) Test(method, path string, reqBody io.Reader, en interface{},
+	ctl Controller) (*http.Request, *httptest.ResponseRecorder) {
+
+	req := httptest.NewRequest(method, path, reqBody)
+	rr := httptest.NewRecorder()
+	rubikReq := Request{
+		Entity: en,
+		Raw:    req,
+		Writer: RResponseWriter{ResponseWriter: rr},
+	}
+
+	ctl(&rubikReq)
+	return req, rr
+}
+
+// TestHandler is a probe util function to test your handler if you are not using a
+// rubik.Controller for your route and using UseHandler() to cast it
+func (p TestProbe) TestHandler(method, path string, reqBody io.Reader, en interface{},
+	h http.Handler) (*http.Request, *httptest.ResponseRecorder) {
+
+	req := httptest.NewRequest(method, path, reqBody)
+	rr := httptest.NewRecorder()
+
+	h.ServeHTTP(rr, req)
+	return req, rr
+
 }

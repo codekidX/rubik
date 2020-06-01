@@ -92,7 +92,9 @@ func boot(isREPLMode bool) error {
 				app.routeTree.Routes = append(app.routeTree.Routes, rinfo)
 
 				if !isREPLMode {
-					pkg.BootMsg(finalPath)
+					if os.Getenv("RUBIK_ENV") != "test" {
+						pkg.BootMsg(finalPath)
+					}
 				}
 			}
 
@@ -103,7 +105,7 @@ func boot(isREPLMode bool) error {
 
 				validEntity := checkIsEntity(route.Entity)
 				if !validEntity {
-					pkg.ErrorMsg("Your Entity must extend cherry.Entity struct")
+					pkg.ErrorMsg("Your Entity must extend rubik.Entity struct")
 					errored = true
 					continue
 				}
@@ -250,7 +252,9 @@ func bootBlocks(blockList map[string]Block) error {
 func bootStatic() {
 	if _, err := os.Stat(pkg.GetStaticFolderPath()); err == nil {
 		app.mux.ServeFiles("/static/*filepath", http.Dir("./static"))
-		pkg.BootMsg("/static")
+		if os.Getenv("RUBIK_ENV") != "test" {
+			pkg.BootMsg("/static")
+		}
 	}
 }
 
