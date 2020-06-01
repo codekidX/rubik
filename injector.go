@@ -146,7 +146,7 @@ func inject(req *http.Request,
 		injectValueByType(val, value, field.Type.Kind())
 	}
 
-	return values.Elem().Interface(), nil
+	return en, nil
 }
 
 func injectValueByType(val interface{}, elem reflect.Value, typ reflect.Kind) {

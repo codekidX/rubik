@@ -5,7 +5,7 @@
 
 ### Welcome to Rubik (alpha)
 
-Rubik is a efficient, scalable micro-framework for writing REST client and server-side applications. It provides a pluggable
+Rubik is a efficient, scalable web framework for writing REST client and server-side applications faster. It provides a pluggable
 layer of abstraction over `net/http` and enables automation of development environment through extensive tooling.
 
 Even though the goal of Rubik is set it'll take a lot of time to achieve it, that being said you must
@@ -41,7 +41,8 @@ okrubik run
 
 ### Questions
 
-Ask by joining the [Mailing list](https://groups.google.com/forum/#!forum/rubikorg/new)
+Co-ordination with suggestions, opinions and questions can be done through this  
+[Mailing list](https://groups.google.com/forum/#!forum/rubikorg/new)
 
 ### Contributing
 

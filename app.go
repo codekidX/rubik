@@ -1,9 +1,37 @@
+// Package rubik is used for accessing Rubik Framework: a minimal and efficient web framework
+// for Go and it's APIs.
+//
+// Running an empty server:
+// 		package main
+//
+// 		import r "github.com/rubikorg/rubik"
+//
+// 		func main() {
+//			// this runs Rubik server on port: 8000
+// 			panic(r.Run())
+// 		}
+//
+// Adding a route:
+//
+// 		package main
+//
+// 		import r "github.com/rubikorg/rubik"
+//
+// 		func main() {
+//			// this runs Rubik server on port: 8000
+// 			index := rubik.Route{
+// 				Path: "/",
+// 				Controller: func (req *r.Request) { req.Respond("This is a text response") },
+// 			}
+// 			rubik.UseRoute(index)
+// 			panic(r.Run())
+// 		}
 package rubik
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -51,7 +79,7 @@ var Dispatch = MessagePasser{
 
 const (
 	// Version of rubik
-	Version = "0.1"
+	Version = "0.2.0"
 )
 
 type tracer interface {
@@ -68,22 +96,29 @@ func (re RestErrorMixin) Error() string {
 	return re.Message
 }
 
-// Middleware intercepts user request and processes it
-type Middleware func(req Request) interface{}
-
 // Controller ...
-type Controller func(entity interface{}) ByteResponse
+type Controller func(*Request)
 
-// RequestContext ...
-type RequestContext struct {
+// Request ...
+type Request struct {
+	app    *rubik
+	Entity interface{}
+	Writer RResponseWriter
+	Params httprouter.Params
+	Raw    *http.Request
+	Ctx    map[string]interface{}
+}
+
+// HookContext ...
+type HookContext struct {
 	Request  *http.Request
 	Ctx      map[string]interface{}
-	Response interface{}
+	Response []byte
 	Status   int
 }
 
 // RequestHook ...
-type RequestHook func(*RequestContext)
+type RequestHook func(*HookContext)
 
 // Rubik is the instance of Server which holds all the necessary information of apis
 type rubik struct {
@@ -103,13 +138,12 @@ type rubik struct {
 }
 
 // Request ...
-type Request struct {
-	Raw            *http.Request
-	Params         httprouter.Params
-	ResponseHeader http.Header
-	app            *rubik
-	entity         interface{}
-}
+// type RequestP struct {
+// 	Raw            *http.Request
+// 	Params         httprouter.Params
+// 	ResponseHeader http.Header
+// 	entity         interface{}
+// }
 
 // GetRouteTree returns a list of loaded routes in rubik
 func (req Request) GetRouteTree() RouteTree {
@@ -137,7 +171,7 @@ type Route struct {
 	JSON                 bool
 	Entity               interface{}
 	Guard                AuthorizationGuard
-	Middlewares          []Middleware
+	Middlewares          []Controller
 	Validation           Validation
 	Controller           Controller
 }
@@ -158,21 +192,6 @@ type RouteInfo struct {
 	IsJSON      bool
 	Method      string
 	Responses   map[int]string
-}
-
-// FromStorage returns the file bytes of a given fileName as response
-func FromStorage(fileName string) ByteResponse {
-	var filePath = filepath.Join(".", "storage", fileName)
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return Failure(500, errors.New("FileNotFoundError: "+fileName+" does not exist."))
-	}
-
-	b, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return Failure(500, err)
-	}
-
-	return Success(b, Type.Bytes)
 }
 
 // GetConfig returns the injected config from the Load method
@@ -212,12 +231,16 @@ func GetBlock(symbol string) Block {
 	return app.blocks[strings.ToLower(symbol)]
 }
 
-// BeforeRequest ...
+// BeforeRequest is used to execute the request hook h. When a request is sent on a certain route
+// the hook specified as h is executed in a separate goroutine without hindering the current
+// main goroutine of request.
 func BeforeRequest(h RequestHook) {
 	beforeHooks = append(beforeHooks, h)
 }
 
-// AfterRequest ...
+// AfterRequest is used to execute the request hook h after completion of the request. A
+// request is said to be complete only after the response is written through http.ResponseWriter
+// interface of http.Server.
 func AfterRequest(h RequestHook) {
 	afterHooks = append(afterHooks, h)
 }
@@ -333,6 +356,38 @@ func UseRoute(route Route) {
 	app.routers = append(app.routers, router)
 }
 
+// rHandler ...
+type rHandler struct {
+	fn http.HandlerFunc
+}
+
+func (rh rHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	rh.fn(w, r)
+}
+
+// UseHandlerFunc converts any http,HandlerFunc into rubik.Controller
+func UseHandlerFunc(fn http.HandlerFunc) Controller {
+	return func(req *Request) {
+		fn(&req.Writer, req.Raw)
+	}
+}
+
+// UseHandler converts any http,Handler into rubik.Controller
+func UseHandler(handler http.Handler) Controller {
+	return func(req *Request) {
+		handler.ServeHTTP(&req.Writer, req.Raw)
+	}
+}
+
+// UseIntermHandler converts any func(http,Handler) http,Handler into rubik.Controller
+func UseIntermHandler(intermHandler func(http.Handler) http.Handler) Controller {
+	return func(req *Request) {
+		rh := rHandler{}
+		rh.fn = func(w http.ResponseWriter, r *http.Request) {}
+		intermHandler(rh).ServeHTTP(&req.Writer, req.Raw)
+	}
+}
+
 // Redirect redirects your request to the given URL
 func Redirect(url string) ByteResponse {
 	return ByteResponse{
@@ -343,15 +398,19 @@ func Redirect(url string) ByteResponse {
 // Proxy does not redirect your current resource locator but
 // makes an internal GET call to the specified URL to serve
 // it's response as your own
-func Proxy(url string) ByteResponse {
-	cl := NewClient(url, time.Second*30)
-	en := BlankRequestEntity{}
-	en.PointTo = "@"
-	resp, err := cl.Get(en)
-	if err != nil {
-		return Failure(500, err)
+func Proxy(url string) Controller {
+	return func(req *Request) {
+		cl := NewClient(url, time.Second*30)
+		en := BlankRequestEntity{}
+		en.PointTo = "@"
+		en.request = req.Raw
+		resp, err := cl.Get(en)
+		if err != nil {
+			req.Throw(500, err)
+			return
+		}
+		req.Respond(resp.StringBody)
 	}
-	return Success(resp.StringBody, Type.Text)
 }
 
 // SetNotFoundHandler sets custom handler for 404
@@ -428,37 +487,67 @@ func Run(args ...string) error {
 	return http.ListenAndServe(port, app.mux)
 }
 
-// RestError returns a json with the error code and the message
-func RestError(code int, message string) (interface{}, error) {
-	return nil, RestErrorMixin{Code: code, Message: message}
-}
-
-// Success is a terminal function for rubik controller that sends byte response
+// Respond is a terminal function for rubik controller that sends byte response
 // it wraps around your arguments for better reading
-func Success(data interface{}, btype ...ByteType) ByteResponse {
-	strings.Contains("a", "a")
-	return ByteResponse{
-		Status: http.StatusOK,
-		Data:   data,
-		OfType: defByteType(btype),
+func (req *Request) Respond(data interface{}, ofType ...ByteType) {
+	var ty ByteType
+	if len(ofType) == 0 {
+		ty = Type.Text
+	} else {
+		ty = ofType[0]
+	}
+
+	switch ty {
+	case Type.HTML:
+		s, ok := data.(string)
+		if !ok {
+			req.Throw(500, E("Error: cannot be written as string"))
+			return
+		}
+		writeResponse(&req.Writer, 200, Content.HTML, []byte(s))
+		break
+	case Type.Text:
+		s, ok := data.(string)
+		if !ok {
+			req.Throw(500, E("Error: cannot be written as string"))
+			return
+		}
+		writeResponse(&req.Writer, 200, Content.Text, []byte(s))
+		break
+	case Type.JSON:
+		req.Writer.WriteHeader(200)
+		err := json.NewEncoder(&req.Writer).Encode(data)
+		if err != nil {
+			req.Throw(500, err)
+		}
 	}
 }
 
-// Failure returns a ByteResponse type with given status code
+// Throw writes an error with given status code as response
 // The ByteType parameter is optional as you can convert your
 // error into a JSON or plain text
-// FACT: if you dont have an error object with you in the moment
+//
+// NOTE: if you dont have an error object with you in the moment
 // you can use r.E() to quickly wrap your stirng into an error
 // and pass it inside this function
-func Failure(status int, err error, btype ...ByteType) ByteResponse {
-	return ByteResponse{
-		Status: status,
-		Error:  err,
-		OfType: defByteType(btype),
+func (req *Request) Throw(status int, err error, btype ...ByteType) {
+	ty := defByteType(btype)
+	switch ty {
+	case Type.Text:
+		writeResponse(&req.Writer, status, Content.Text, []byte(err.Error()))
+		break
+	case Type.JSON:
+		req.Writer.Header().Add(Content.Header, Content.JSON)
+		req.Writer.WriteHeader(status)
+		jsonErr := RestErrorMixin{status, err.Error()}
+		json.NewEncoder(&req.Writer).Encode(&jsonErr)
+		break
 	}
 }
 
-// E returns errors.New's error object
+// E wraps the message into an error interface and returns it. This method can be used in
+// your controller for throwing error response.
+//
 // NOTE: this error is not stdlib errors package
 // this is pkg/errors error wrapper
 func E(msg string) error {

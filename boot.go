@@ -1,7 +1,6 @@
 package rubik
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -112,107 +111,51 @@ func boot(isREPLMode bool) error {
 
 			handler := func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 				defer req.Body.Close()
-				reqCtx := RequestContext{
+
+				var en interface{}
+				if route.Entity != nil {
+					// var err error
+					en, _ = inject(req, ps, route.Entity, route.Validation)
+					// if err != nil {
+					// 	// TODO: injection error must be 400 bad request
+					// 	handleErrorResponse(err, writer, &reqCtx)
+					// 	return
+					// }
+				}
+
+				rubikWriter := RResponseWriter{}
+				rubikWriter.ResponseWriter = writer
+				rubikReq := Request{
+					Entity: en,
+					Raw:    req,
+					Writer: rubikWriter,
+					Ctx:    make(map[string]interface{}),
+				}
+
+				hookCtx := HookContext{
 					Request: req,
 					Ctx:     make(map[string]interface{}),
 				}
 
-				var en interface{}
-				if route.Entity != nil {
-					var err error
-					en, err = inject(req, ps, route.Entity, route.Validation)
-					if err != nil {
-						// TODO: injection error must be 400 bad request
-						handleErrorResponse(err, writer, &reqCtx)
-						return
-					}
-				}
-
-				go dispatchHooks(beforeHooks, &reqCtx)
+				go dispatchHooks(beforeHooks, &hookCtx)
 
 				// TODO: this is something i need to think about after addding the
 				// speculate.go as the middleware response also needs tp be
 				// speculated
 				if len(route.Middlewares) > 0 {
-					fmt.Println("mw injection")
 					for _, m := range route.Middlewares {
-						r := Request{
-							Raw:            req,
-							Params:         ps,
-							ResponseHeader: writer.Header(),
+						m(&rubikReq)
+						if rubikReq.Writer.written {
+							return
 						}
-						intf := m(r)
-						fmt.Println(intf)
 					}
 				}
 
-				var resp interface{}
-				bresp := route.Controller(en)
+				route.Controller(&rubikReq)
 
-				// set values in request context
-				reqCtx.Status = bresp.Status
-
-				if bresp.redirectURL != "" {
-					http.Redirect(writer, req, bresp.redirectURL, http.StatusFound)
-					return
-				}
-
-				// check if error response
-				if bresp.Status != http.StatusOK {
-					rem := RestErrorMixin{
-						Code:    bresp.Status,
-						Message: bresp.Error.Error(),
-					}
-
-					if bresp.OfType == Type.JSON {
-						b, _ := json.Marshal(rem)
-						writeResponse(writer, bresp.Status, Content.JSON, b)
-					} else {
-						writeResponse(writer, bresp.Status, Content.Text,
-							[]byte(rem.Message))
-					}
-					reqCtx.Response = rem
-				} else {
-					resp = bresp.Data
-
-					switch bresp.OfType {
-					case Type.HTML:
-						s, _ := resp.(string)
-						writeResponse(writer, bresp.Status, Content.HTML, []byte(s))
-						break
-					case Type.Text:
-						s, _ := resp.(string)
-						writeResponse(writer, bresp.Status, Content.Text, []byte(s))
-						break
-					case Type.JSON:
-						b, _ := json.Marshal(resp)
-						writeResponse(writer, bresp.Status, Content.JSON, b)
-						break
-					case Type.templateHTML, Type.templateText:
-						var conType = Content.HTML
-						if bresp.OfType == Type.templateText {
-							conType = Content.Text
-						}
-
-						b, _ := bresp.Data.([]byte)
-						writeResponse(writer, bresp.Status, conType, b)
-						break
-					case Type.Bytes:
-						b, _ := resp.([]byte)
-						// TODO: write something about this coersion error
-						// if !ok {
-						// }
-						// TODO: check how to set header for a file byte body
-						writeResponse(writer, bresp.Status, Content.Text, b)
-						break
-					default:
-						return
-					}
-
-					reqCtx.Response = bresp.Data
-				}
-
-				go dispatchHooks(afterHooks, &reqCtx)
+				hookCtx.Status = rubikReq.Writer.status
+				hookCtx.Response = rubikReq.Writer.data
+				go dispatchHooks(afterHooks, &hookCtx)
 			}
 
 			if route.Controller != nil {
@@ -353,7 +296,7 @@ func handleResponse(response interface{}) {}
 // TODO: make this cleaner and better
 // this method is used to write error stacktrace response if env is
 // dev and not if otherwise
-func handleErrorResponse(err error, writer http.ResponseWriter, rc *RequestContext) {
+func handleErrorResponse(err error, writer http.ResponseWriter, rc *HookContext) {
 	isDevEnv := true
 	if !(app.currentEnv == "" || app.currentEnv == "development") {
 		isDevEnv = false
@@ -393,7 +336,7 @@ func handleErrorResponse(err error, writer http.ResponseWriter, rc *RequestConte
 // dispatchHooks just calls all the hooks passed as the argument
 // this is generally used to call before/after request hooks
 // and is intended to be executed as a goroutine
-func dispatchHooks(hooks []RequestHook, rc *RequestContext) {
+func dispatchHooks(hooks []RequestHook, rc *HookContext) {
 	if len(hooks) > 0 {
 		for _, h := range hooks {
 			h(rc)
@@ -414,7 +357,7 @@ func bootMessageListener() {
 			msg := fmt.Sprintf("A message was dispatched for %s block, but no receiver found", tag)
 			pkg.WarnMsg(msg)
 		} else {
-			go app.msgRegistry[tag].ctl(msg.Body)
+			go app.msgRegistry[tag].ctl(&Request{Entity: msg.Body})
 		}
 		break
 	case err := <-Dispatch.Error:

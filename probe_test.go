@@ -22,8 +22,8 @@ func initTestRouter() {
 	Use(indexRouter)
 }
 
-func testIndexCtl(en interface{}) ByteResponse {
-	return Success("Woohoo!")
+func testIndexCtl(req *Request) {
+	req.Respond("Woohoo!")
 }
 
 func TestGetTestClient(t *testing.T) {
