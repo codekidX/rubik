@@ -79,7 +79,7 @@ var Dispatch = MessagePasser{
 
 const (
 	// Version of rubik
-	Version = "0.1"
+	Version = "0.2.0"
 )
 
 type tracer interface {
