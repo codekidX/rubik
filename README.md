@@ -1,8 +1,7 @@
-<img src="https://avatars3.githubusercontent.com/u/61872650?s=200&v=4">
+<img src="https://avatars3.githubusercontent.com/u/61872650?s=120&v=4">
 
-### Rubik
-#### An efficient, scalable Web Framework
-----
+# Rubik
+## An efficient, scalable Web Framework
 
 [Homepage](https://rubikorg.github.io) - [API Documentation](https://pkg.go.dev/github.com/rubikorg/rubik?tab=doc)
 
