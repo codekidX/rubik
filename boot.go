@@ -1,6 +1,7 @@
 package rubik
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -99,44 +100,51 @@ func boot(isREPLMode bool) error {
 			}
 
 			if route.Entity != nil {
-				if reflect.TypeOf(route.Entity).Kind() != reflect.Ptr {
-					return errors.New("Entity field must be a pointer to your Entity")
-				}
-
-				validEntity := checkIsEntity(route.Entity)
-				if !validEntity {
-					pkg.ErrorMsg("Your Entity must extend rubik.Entity struct")
-					errored = true
-					continue
+				if reflect.TypeOf(route.Entity).Kind() == reflect.Ptr {
+					return errors.New("do not pass a pointer of your entity for: " + finalPath)
 				}
 			}
 
 			handler := func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 				defer req.Body.Close()
 
-				var en interface{}
-				if route.Entity != nil {
-					// var err error
-					en, _ = inject(req, ps, route.Entity, route.Validation)
-					// if err != nil {
-					// 	// TODO: injection error must be 400 bad request
-					// 	handleErrorResponse(err, writer, &reqCtx)
-					// 	return
-					// }
-				}
-
 				rubikWriter := RResponseWriter{}
 				rubikWriter.ResponseWriter = writer
 				rubikReq := Request{
-					Entity: en,
 					Raw:    req,
 					Writer: rubikWriter,
-					Ctx:    make(map[string]interface{}),
+					Ctx:    context.Background(),
 				}
 
 				hookCtx := HookContext{
 					Request: req,
 					Ctx:     make(map[string]interface{}),
+				}
+
+				var en interface{}
+				if route.Entity != nil {
+					en = reflect.New(reflect.TypeOf(route.Entity)).Interface()
+					var err error
+					en, err = inject(req, ps, en, route.Validation)
+					if err != nil {
+						writeResponse(&rubikWriter, 400, Content.Text, []byte(err.Error()))
+						return
+					}
+
+					rubikReq.Entity = en
+				}
+
+				if route.Guard != nil {
+					placebo := &App{
+						app:        *app,
+						CurrentURL: app.url,
+						RouteTree:  app.routeTree,
+					}
+					err := bootGuard(&rubikWriter, route.Guard, placebo, req.Header)
+					if err != nil {
+						fmt.Fprint(&rubikWriter, err.Error())
+						return
+					}
 				}
 
 				go dispatchHooks(beforeHooks, &hookCtx)

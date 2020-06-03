@@ -30,6 +30,7 @@ package rubik
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -108,7 +109,7 @@ type Request struct {
 	Writer RResponseWriter
 	Params httprouter.Params
 	Raw    *http.Request
-	Ctx    map[string]interface{}
+	Ctx    context.Context
 }
 
 // HookContext ...
@@ -137,6 +138,7 @@ type rubik struct {
 	routeTree    RouteTree
 	comm         map[string]Communicator
 	msgRegistry  map[string]rx
+	dep          interface{}
 }
 
 // Request ...
@@ -343,7 +345,7 @@ func Load(config interface{}) error {
 	port, _ := app.intermConfig.Get("port").(string)
 	// TODO: think about this line, how do we know if we want it to
 	// run on machine ip or on the localhost?
-	app.url = "127.0.0.1" + port
+	app.url = "http://127.0.0.1" + port
 
 	return nil
 }
@@ -400,6 +402,16 @@ func UseIntermHandler(intermHandler func(http.Handler) http.Handler) Controller 
 		rh.fn = func(w http.ResponseWriter, r *http.Request) {}
 		intermHandler(rh).ServeHTTP(&req.Writer, req.Raw)
 	}
+}
+
+// SetDep stores your global level dependencies in Rubik
+// Please note that this function is not to be used for
+// setting any volatile intefaces{} that can change in
+// any given time which can create race conditions.
+// This method is only used for static one time inited
+// dependencies such as logger, Connection pool etc..
+func SetDep(any interface{}) {
+	app.dep = any
 }
 
 // Redirect redirects your request to the given URL with status 302 by default.
@@ -513,7 +525,15 @@ func Run(args ...string) error {
 		port = args[0]
 	}
 
-	pkg.RubikMsg("Rubik server started on port " + port[1:])
+	var tomlUsed string
+	env := os.Getenv("RUBIK_ENV")
+	if env == "" || env == "development" {
+		tomlUsed = "default"
+	} else {
+		tomlUsed = env
+	}
+	fmt.Println("\n\nStarted development server on: " + app.url)
+	fmt.Printf("Rubik version %s, configured from \"%s.toml\"", Version, tomlUsed)
 
 	return http.ListenAndServe(port, app.mux)
 }
@@ -521,12 +541,7 @@ func Run(args ...string) error {
 // Respond is a terminal function for rubik controller that sends byte response
 // it wraps around your arguments for better reading
 func (req *Request) Respond(data interface{}, ofType ...ByteType) {
-	var ty ByteType
-	if len(ofType) == 0 {
-		ty = Type.Text
-	} else {
-		ty = ofType[0]
-	}
+	ty := defByteType(ofType)
 
 	switch ty {
 	case Type.HTML:
@@ -574,6 +589,12 @@ func (req *Request) Throw(status int, err error, btype ...ByteType) {
 		json.NewEncoder(&req.Writer).Encode(&jsonErr)
 		break
 	}
+}
+
+// GetDep returns the global one time dependencies
+// to your handlers
+func (req *Request) GetDep() interface{} {
+	return app.dep
 }
 
 // E wraps the message into an error interface and returns it. This method can be used in
