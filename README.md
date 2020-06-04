@@ -1,11 +1,11 @@
-<p align="center">
-    <img src="https://avatars3.githubusercontent.com/u/61872650?s=200&v=4">
-</p>
+<img src="https://avatars3.githubusercontent.com/u/61872650?s=120&v=4">
 
+# Rubik
+## An efficient, scalable Web Framework
 
-### Welcome to Rubik (alpha)
+[Homepage](https://rubikorg.github.io) - [API Documentation](https://pkg.go.dev/github.com/rubikorg/rubik?tab=doc)
 
-Rubik is a efficient, scalable web framework for writing REST client and server-side applications faster. It provides a pluggable
+For writing REST client and server-side applications faster. It provides a pluggable
 layer of abstraction over `net/http` and enables automation of development environment through extensive tooling.
 
 Even though the goal of Rubik is set it'll take a lot of time to achieve it, that being said you must
@@ -33,11 +33,6 @@ okrubik create
 cd ${project}
 okrubik run
 ```
-
-### Documentation
-
-- [Project Structure](https://rubikorg.github.io/essentials/core-concepts/) _(alpha)_
-- API Documentation with [GoDoc](https://pkg.go.dev/github.com/rubikorg/rubik?tab=doc) _(alpha)_
 
 ### Questions
 
