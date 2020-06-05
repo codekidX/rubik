@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -12,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/rubikorg/rubik/internal/checker"
-	"github.com/rubikorg/rubik/pkg"
 
 	"github.com/pkg/errors"
 
@@ -120,11 +118,10 @@ func inject(req *http.Request,
 			}
 			break
 		case "form":
-			files := req.MultipartForm.File[transportKey]
-			if (files == nil || len(files) == 0) && isRequired {
+			val = req.Form.Get(transportKey)
+			if (val == "") && isRequired {
 				return nil, requiredError
 			}
-			val = files
 			break
 		case "param":
 			paramKey := capitalize(strings.ToLower(transportKey))
@@ -203,44 +200,6 @@ func injectValueByType(val interface{}, elem reflect.Value, typ reflect.Kind) {
 		// should we loop a on all struct fields and add value?
 		break
 	case reflect.Slice:
-		break
-	case reflect.TypeOf(File{}).Kind():
-		// if it is a single file we coece it into []multipart.File first and
-		// pick up the first one
-		value, ok := val.([]*multipart.File)
-		if ok && elem.CanSet() && len(value) > 0 {
-			file := *(value)[0]
-			defer file.Close()
-			b, err := ioutil.ReadAll(file)
-			if err != nil {
-				pkg.ErrorMsg("error while reading form file: " + err.Error())
-				return
-			}
-			elem.FieldByName("Raw").SetBytes(b)
-		}
-		break
-	case reflect.TypeOf([]File{}).Kind():
-		// TODO: the above File{} case and this can be a single function
-		value, ok := val.([]*multipart.File)
-		if ok && elem.CanSet() && len(value) > 0 {
-			for _, f := range value {
-				file := *f
-				defer file.Close()
-
-				b, err := ioutil.ReadAll(file)
-				if err != nil {
-					pkg.ErrorMsg("error while reading form file: " + err.Error())
-					return
-				}
-
-				sliceElem := reflect.MakeSlice(elem.Type(), len(value), elem.Cap())
-				for i := 0; i < len(value); i++ {
-					rubikFile := reflect.New(reflect.TypeOf(File{}))
-					rubikFile.FieldByName("Raw").SetBytes(b)
-					sliceElem.Index(i).Set(reflect.ValueOf(rubikFile).Elem())
-				}
-			}
-		}
 		break
 	}
 }
