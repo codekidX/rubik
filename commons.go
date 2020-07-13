@@ -26,17 +26,6 @@ func valuesToMap(values url.Values) map[string]interface{} {
 	return bodyMap
 }
 
-// func injectToType(respMap map[string]interface{}, infer interface{}, target *interface{}) interface{} {
-// 	fields := reflect.TypeOf(infer)
-
-// 	num := fields.NumField()
-
-// 	for i := 0; i < num; i++ {
-// 		fields := fields.Field(i)
-
-// 	}
-// }
-
 func getCountOfDollar(path string) int {
 	count := 0
 	for _, s := range path {

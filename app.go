@@ -88,13 +88,13 @@ type tracer interface {
 }
 
 // RestErrorMixin type is used by rubik when rubik.Throw is called for
-// writing error types as common JSON structure ocross Rubik server
+// writing error types as common JSON structure across Rubik server
 type RestErrorMixin struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
-// Error implements the errror interface of Go
+// Error implements the error interface of Go
 func (re RestErrorMixin) Error() string {
 	return re.Message
 }
@@ -140,14 +140,6 @@ type rubik struct {
 	msgRegistry  map[string]rx
 	dep          interface{}
 }
-
-// Request ...
-// type RequestP struct {
-// 	Raw            *http.Request
-// 	Params         httprouter.Params
-// 	ResponseHeader http.Header
-// 	entity         interface{}
-// }
 
 // GetRouteTree returns a list of loaded routes in rubik
 func (req Request) GetRouteTree() RouteTree {

@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rubikorg/rubik/internal/checker"
-
 	"github.com/pkg/errors"
 
 	"github.com/julienschmidt/httprouter"
@@ -133,10 +131,12 @@ func inject(req *http.Request,
 		}
 
 		// this is for the validations the developer provieded
-		if len(v) > 0 && v[field.Name] != "" {
-			err := checker.Check(value, v[field.Name])
-			if err != nil {
-				return nil, err
+		if len(v) > 0 && len(v[field.Name]) != 0 {
+			for _, asrt := range v[field.Name] {
+				err := asrt(val)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 
