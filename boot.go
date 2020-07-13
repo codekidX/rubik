@@ -94,14 +94,15 @@ func boot(isREPLMode bool) error {
 
 				if !isREPLMode {
 					if os.Getenv("RUBIK_ENV") != "test" {
-						pkg.BootMsg(finalPath)
+						pkg.EmojiMsg("✏️", finalPath)
 					}
 				}
 			}
 
 			if route.Entity != nil {
 				if reflect.TypeOf(route.Entity).Kind() == reflect.Ptr {
-					return errors.New("do not pass a pointer of your entity for: " + finalPath)
+					return errors.New("rubik does not allowa pointer of your entity. used in: " +
+						finalPath)
 				}
 			}
 
@@ -135,16 +136,16 @@ func boot(isREPLMode bool) error {
 				}
 
 				if route.Guard != nil {
-					placebo := &App{
+					_ = &App{
 						app:        *app,
 						CurrentURL: app.url,
 						RouteTree:  app.routeTree,
 					}
-					err := bootGuard(&rubikWriter, route.Guard, placebo, req.Header)
-					if err != nil {
-						fmt.Fprint(&rubikWriter, err.Error())
-						return
-					}
+					// err := bootGuard(&rubikWriter, route.Guard, placebo, req.Header)
+					// if err != nil {
+					// 	fmt.Fprint(&rubikWriter, err.Error())
+					// 	return
+					// }
 				}
 
 				go dispatchHooks(beforeHooks, &hookCtx)
@@ -245,7 +246,7 @@ func bootBlocks(blockList map[string]Block) error {
 				}
 			}
 
-			msg := fmt.Sprintf("Attached =[ @(%s) ]=", k)
+			msg := fmt.Sprintf("📦 Attached =[ @(%s) ]=", k)
 			msg = tint.Init().Exp(msg, tint.Cyan.Bold())
 			fmt.Println(msg)
 		}
@@ -261,35 +262,9 @@ func bootStatic() {
 	if _, err := os.Stat(pkg.GetStaticFolderPath()); err == nil {
 		app.mux.ServeFiles("/static/*filepath", http.Dir("./static"))
 		if os.Getenv("RUBIK_ENV") != "test" {
-			pkg.BootMsg("/static")
+			pkg.EmojiMsg("⚡️", "/static")
 		}
 	}
-}
-
-// bootGuard is a method that verifies the following this
-//
-// -> calls guard.Require() to check if the config
-// requirement is met by the implementer
-// -> calls guard.GetRealm() to check if the client
-// needs to be aware of an authorization method or not
-// -> calls guard.Authorize() only after evaluating
-// both the above function
-func bootGuard(
-	w http.ResponseWriter, g AuthorizationGuard, placebo *App, headers http.Header) error {
-	if g.Require() != "" {
-		val := app.intermConfig.Get(g.Require())
-		if val == nil {
-			msg := fmt.Sprintf("No config object [%s]",
-				g.Require())
-			return errors.New(msg)
-		}
-	}
-
-	if g.GetRealm() != "" {
-		w.Header().Set("WWW-Authenticate", g.GetRealm())
-	}
-
-	return g.Authorize(placebo, headers)
 }
 
 func bootMiddlewares() {}
