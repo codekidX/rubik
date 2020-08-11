@@ -38,6 +38,12 @@ var Content = struct {
 	"multipart/form-data",
 }
 
+var StringByteTypeMap = map[string]ByteType{
+	"json": Type.JSON,
+	"html": Type.HTML,
+	"text": Type.Text,
+}
+
 type rx struct {
 	ctl Controller
 	en  interface{}
@@ -73,13 +79,12 @@ type ByteResponse struct {
 type Validation map[string][]Assertion
 
 // SessionManager is an interface contract that rubik.Session uses
-//
-// // Anything abiding by this contract can
-// type SessionManager interface {
-// 	Get(string) string
-// 	Set(string, string) error
-// 	Delete(string) bool
-// }
+// Anything abiding by this contract can
+type SessionManager interface {
+	Get(string) string
+	Set(string, string) error
+	Delete(string) bool
+}
 
 // Communicator interface is used to handle the service/driver that
 // rubik's inherent communication depends upon
@@ -87,7 +92,7 @@ type Communicator interface {
 	Send(string, interface{}) error
 }
 
-type AuthorizationGuard func(http.Header) error
+type AuthorizationGuard = Controller
 
 // Entity holds the data for a single API call
 // It lets you write consolidated clean Go code
@@ -185,3 +190,10 @@ func (w *RResponseWriter) Write(b []byte) (int, error) {
 // it should return a message stating why validation failed and
 // bool indicating if assertion has passed or not
 type Assertion func(interface{}) error
+
+// Modifier lets you modify the parameters passed through the request.
+// The input of the modifier is the value from the wire and the output
+// is the modified value.
+// Note: Modified value type must match the type declared in the
+// entity.
+// type Modifier func(interface{}) interface{}

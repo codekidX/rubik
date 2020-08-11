@@ -11,13 +11,15 @@ func init() {
 	probe = NewProbe(initTestRouter())
 }
 
+var ir = Route{
+	Method:     "GET",
+	Path:       "/",
+	Controller: testIndexCtl,
+}
+
 func initTestRouter() Router {
 	indexRouter := Create("/")
-	i := Route{
-		Path:       "/",
-		Controller: testIndexCtl,
-	}
-	indexRouter.Add(i)
+	indexRouter.Add(ir)
 	return indexRouter
 }
 
@@ -31,8 +33,8 @@ func TestGetTestClient(t *testing.T) {
 	}
 }
 
-func TestGetCallWithTestClient(t *testing.T) {
-	_, rr := probe.Test("GET", "/", nil, nil, testIndexCtl)
+func TestSimpleGet(t *testing.T) {
+	rr := probe.TestSimple(ir, nil, testIndexCtl)
 
 	if rr.Result().StatusCode != 200 {
 		t.Error("Router for index initialized but request returned non 200 response code:",

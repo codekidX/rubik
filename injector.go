@@ -134,7 +134,9 @@ func inject(req *http.Request,
 		if len(v) > 0 && len(v[field.Name]) != 0 {
 			for _, asrt := range v[field.Name] {
 				err := asrt(val)
-				if err != nil {
+				if err != nil && strings.Contains(err.Error(), "$") {
+					return nil, errors.New(strings.ReplaceAll(err.Error(), "$", field.Name))
+				} else if err != nil {
 					return nil, err
 				}
 			}

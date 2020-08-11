@@ -13,6 +13,7 @@ type Project struct {
 	Path         string `toml:"path"`
 	Watchable    bool   `toml:"watch"`
 	Communicable bool   `toml:"communicate"`
+	Log          bool   `toml:"log"`
 }
 
 // Config is the main config for your rubik runtime

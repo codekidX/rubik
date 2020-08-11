@@ -25,6 +25,15 @@ type Block interface {
 	OnAttach(*App) error
 }
 
+// ExtensionBlock is executed plugins when RUBIK_ENV = ext.
+// Blocks which requires access to server but does need the
+// server to run. To run your extention block use
+// `okrubik run --ext`
+type ExtensionBlock interface {
+	OnPlug(*App) error
+	Name() string
+}
+
 // App is a sandboxed object used by the external blocks of code
 // to access some risk-free part of your rubik server
 // For example:

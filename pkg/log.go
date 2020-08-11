@@ -13,16 +13,10 @@ type Logger struct {
 	CanLog bool
 }
 
-// RubikMsg appends a diamond before the log message
-func RubikMsg(message string) {
-	template := "\n\n ❒  " + message
-	fmt.Println(template)
-}
-
 // DebugMsg appends a debug before the log message
 func DebugMsg(message string) {
-	template := "@([)@(DEBUG)@(]) " + message
-	fmt.Println(t.Exp(template, tint.White.Bold(), tint.White.Dim(), tint.Normal.Bold()))
+	template := "@( DEBUG ) " + message
+	fmt.Println(t.Exp(template, tint.BgWhite.Add(tint.Black)))
 }
 
 // WarnMsg appends a warn before the log message
@@ -33,8 +27,8 @@ func WarnMsg(message string) {
 
 // ErrorMsg appends a error before the log message
 func ErrorMsg(message string) {
-	template := "@([)@(ERROR)@(]) " + message
-	fmt.Println(t.Exp(template, tint.White.Bold(), tint.Red, tint.Normal.Bold()))
+	template := "@( ERROR ) " + message
+	fmt.Println(t.Exp(template, tint.BgRed.Add(tint.White.Bold())))
 }
 
 // EmojiMsg writes the booting message to stdout
