@@ -118,13 +118,15 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 					Ctx:     make(map[string]interface{}),
 				}
 
-				if route.Guard != nil {
-					route.Guard(&rubikReq)
-					if rubikReq.Writer.written {
-						hookCtx.Status = rubikReq.Writer.status
-						hookCtx.Response = rubikReq.Writer.data
-						go dispatchHooks(afterHooks, &hookCtx)
-						return
+				if len(route.Guards) > 0 {
+					for _, g := range route.Guards {
+						g(&rubikReq)
+						if rubikReq.Writer.written {
+							hookCtx.Status = rubikReq.Writer.status
+							hookCtx.Response = rubikReq.Writer.data
+							go dispatchHooks(afterHooks, &hookCtx)
+							return
+						}
 					}
 				}
 

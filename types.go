@@ -92,8 +92,6 @@ type Communicator interface {
 	Send(string, interface{}) error
 }
 
-type AuthorizationGuard = Controller
-
 // Entity holds the data for a single API call
 // It lets you write consolidated clean Go code
 type Entity struct {

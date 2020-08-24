@@ -172,13 +172,14 @@ func (req Request) Config(accessor string) interface{} {
 // [ Entity check --- Guard() --- Validation() --- []Middlewares()
 // --- Controller() ]
 type Route struct {
+	corsOpts             CORSOptions
 	Path                 string
 	Method               string
 	Description          string
 	ResponseDeclarations map[int]string
 	JSON                 bool
 	Entity               interface{}
-	Guard                AuthorizationGuard
+	Guards               []Controller
 	Middlewares          []Controller
 	Validation           Validation
 	Controller           Controller
@@ -402,16 +403,6 @@ func UseIntermHandler(intermHandler func(http.Handler) http.Handler) Controller 
 	}
 }
 
-// SetDep stores your global level dependencies in Rubik
-// Please note that this function is not to be used for
-// setting any volatile intefaces{} that can change in
-// any given time which can create race conditions.
-// This method is only used for static one time inited
-// dependencies such as logger, Connection pool etc..
-func SetDep(any interface{}) {
-	app.dep = any
-}
-
 // Redirect redirects your request to the given URL with status 302 by default.
 // If you want to provide a custom status for your redirection you can do that
 // by passing in a custom status like so:
@@ -564,9 +555,9 @@ func E(msg string) error {
 	return errors.New(msg)
 }
 
-// QControllers adds the controllers one in the order of parameters passed and
+// Ctls adds the controllers one in the order of parameters passed and
 // feeds them to the bootloader
-func QControllers(ctls ...Controller) []Controller {
+func Ctls(ctls ...Controller) []Controller {
 	return ctls
 }
 
