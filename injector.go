@@ -4,15 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"github.com/rubikorg/rubik/internal/checker"
-	"github.com/rubikorg/rubik/pkg"
 
 	"github.com/pkg/errors"
 
@@ -120,11 +116,10 @@ func inject(req *http.Request,
 			}
 			break
 		case "form":
-			files := req.MultipartForm.File[transportKey]
-			if (files == nil || len(files) == 0) && isRequired {
+			val = req.Form.Get(transportKey)
+			if (val == "") && isRequired {
 				return nil, requiredError
 			}
-			val = files
 			break
 		case "param":
 			paramKey := capitalize(strings.ToLower(transportKey))
@@ -136,10 +131,14 @@ func inject(req *http.Request,
 		}
 
 		// this is for the validations the developer provieded
-		if len(v) > 0 && v[field.Name] != "" {
-			err := checker.Check(value, v[field.Name])
-			if err != nil {
-				return nil, err
+		if len(v) > 0 && len(v[field.Name]) != 0 {
+			for _, asrt := range v[field.Name] {
+				err := asrt(val)
+				if err != nil && strings.Contains(err.Error(), "$") {
+					return nil, errors.New(strings.ReplaceAll(err.Error(), "$", field.Name))
+				} else if err != nil {
+					return nil, err
+				}
 			}
 		}
 
@@ -203,44 +202,6 @@ func injectValueByType(val interface{}, elem reflect.Value, typ reflect.Kind) {
 		// should we loop a on all struct fields and add value?
 		break
 	case reflect.Slice:
-		break
-	case reflect.TypeOf(File{}).Kind():
-		// if it is a single file we coece it into []multipart.File first and
-		// pick up the first one
-		value, ok := val.([]*multipart.File)
-		if ok && elem.CanSet() && len(value) > 0 {
-			file := *(value)[0]
-			defer file.Close()
-			b, err := ioutil.ReadAll(file)
-			if err != nil {
-				pkg.ErrorMsg("error while reading form file: " + err.Error())
-				return
-			}
-			elem.FieldByName("Raw").SetBytes(b)
-		}
-		break
-	case reflect.TypeOf([]File{}).Kind():
-		// TODO: the above File{} case and this can be a single function
-		value, ok := val.([]*multipart.File)
-		if ok && elem.CanSet() && len(value) > 0 {
-			for _, f := range value {
-				file := *f
-				defer file.Close()
-
-				b, err := ioutil.ReadAll(file)
-				if err != nil {
-					pkg.ErrorMsg("error while reading form file: " + err.Error())
-					return
-				}
-
-				sliceElem := reflect.MakeSlice(elem.Type(), len(value), elem.Cap())
-				for i := 0; i < len(value); i++ {
-					rubikFile := reflect.New(reflect.TypeOf(File{}))
-					rubikFile.FieldByName("Raw").SetBytes(b)
-					sliceElem.Index(i).Set(reflect.ValueOf(rubikFile).Elem())
-				}
-			}
-		}
 		break
 	}
 }

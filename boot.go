@@ -45,24 +45,21 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // server
 // The sequence of booting is as follows:
 //
-// 1. bootMessageListener()
-// 2. handle404Response()
-// 3. bootBlocks()
-// 4. bootStatic()
-// 5. bootRoutes()
-func boot(isREPLMode bool) error {
-	go bootMessageListener()
-
+// 1. handle404Response()
+// 2. bootBlocks()
+// 3. bootStatic()
+// 4. bootRoutes()
+func boot(isREPLMode bool, isExtensionMode bool) error {
 	if !isREPLMode {
 		handle404Response()
-		err := bootBlocks(app.blocks)
+		err := bootBlocks(app.blocks, isExtensionMode)
 		if err != nil {
 			pkg.ErrorMsg(err.Error())
 			return err
 		}
 	}
 
-	bootStatic()
+	bootStatic(isExtensionMode)
 
 	//c.checkForConfig()
 	var errored bool
@@ -92,33 +89,45 @@ func boot(isREPLMode bool) error {
 				}
 				app.routeTree.Routes = append(app.routeTree.Routes, rinfo)
 
-				if !isREPLMode {
+				if !isREPLMode && !isExtensionMode {
 					if os.Getenv("RUBIK_ENV") != "test" {
-						pkg.BootMsg(finalPath)
+						pkg.EmojiMsg("✏️", finalPath)
 					}
 				}
 			}
 
 			if route.Entity != nil {
 				if reflect.TypeOf(route.Entity).Kind() == reflect.Ptr {
-					return errors.New("do not pass a pointer of your entity for: " + finalPath)
+					return errors.New("rubik does not allowa pointer of your entity. used in: " +
+						finalPath)
 				}
 			}
 
 			handler := func(writer http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 				defer req.Body.Close()
-
-				rubikWriter := RResponseWriter{}
-				rubikWriter.ResponseWriter = writer
+				rubikWriter := RResponseWriter{
+					ResponseWriter: writer,
+				}
 				rubikReq := Request{
 					Raw:    req,
 					Writer: rubikWriter,
 					Ctx:    context.Background(),
 				}
-
 				hookCtx := HookContext{
 					Request: req,
 					Ctx:     make(map[string]interface{}),
+				}
+
+				if len(route.Guards) > 0 {
+					for _, g := range route.Guards {
+						g(&rubikReq)
+						if rubikReq.Writer.written {
+							hookCtx.Status = rubikReq.Writer.status
+							hookCtx.Response = rubikReq.Writer.data
+							go dispatchHooks(afterHooks, &hookCtx)
+							return
+						}
+					}
 				}
 
 				var en interface{}
@@ -134,28 +143,15 @@ func boot(isREPLMode bool) error {
 					rubikReq.Entity = en
 				}
 
-				if route.Guard != nil {
-					placebo := &App{
-						app:        *app,
-						CurrentURL: app.url,
-						RouteTree:  app.routeTree,
-					}
-					err := bootGuard(&rubikWriter, route.Guard, placebo, req.Header)
-					if err != nil {
-						fmt.Fprint(&rubikWriter, err.Error())
-						return
-					}
-				}
+				dispatchHooks(beforeHooks, &hookCtx)
 
-				go dispatchHooks(beforeHooks, &hookCtx)
-
-				// TODO: this is something i need to think about after addding the
-				// speculate.go as the middleware response also needs tp be
-				// speculated
 				if len(route.Middlewares) > 0 {
 					for _, m := range route.Middlewares {
 						m(&rubikReq)
 						if rubikReq.Writer.written {
+							hookCtx.Status = rubikReq.Writer.status
+							hookCtx.Response = rubikReq.Writer.data
+							go dispatchHooks(afterHooks, &hookCtx)
 							return
 						}
 					}
@@ -185,8 +181,16 @@ func boot(isREPLMode bool) error {
 		}
 	}
 
+	if isExtensionMode {
+		err := bootExtensions()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	if !isREPLMode {
-		err := bootBlocks(app.afterBlocks)
+		err := bootBlocks(app.afterBlocks, isExtensionMode)
 		if err != nil {
 			return err
 		}
@@ -195,6 +199,7 @@ func boot(isREPLMode bool) error {
 	if errored {
 		return errors.New("BootError: error while running rubik boot sequence")
 	}
+
 	return nil
 }
 
@@ -211,45 +216,52 @@ func writeResponse(w http.ResponseWriter, status int, contype string, body []byt
 // the onAttach method to boot it's requirements.
 // A block is said to be attached only if the return error
 // value is nil
-func bootBlocks(blockList map[string]Block) error {
+func bootBlocks(blockList map[string]Block, isExtensionMode bool) error {
 	if len(blockList) > 0 {
 		for k, v := range blockList {
-			// Attaching inherent blocks to the rubik server
-			// Inherent blocks are nothing but blocks that
-			// are intended to be attached to the core
-			// functionality of rubik server
-			// Rather than attaching a block as an extended
-			// functionality you can access these blocks
-			// as a part of core API
-			genBlockName := strings.ToLower(k)
 			sb := &App{
-				app: *app, blockName: k,
+				app:        *app,
+				blockName:  k,
 				CurrentURL: app.url,
 				RouteTree:  app.routeTree,
 			}
-			if strings.Contains(genBlockName, "messagepasser") {
-				msgPasser, ok := v.(Communicator)
-				if !ok {
-					return errors.New("Value for message passer block must implement the " +
-						"MessagePasser interface")
-				}
-				err := v.OnAttach(sb)
-				if err != nil {
-					return err
-				}
-				app.comm[k] = msgPasser
-			} else {
-				err := v.OnAttach(sb)
-				if err != nil {
-					return err
-				}
+
+			err := v.OnAttach(sb)
+			if err != nil {
+				return err
 			}
 
-			msg := fmt.Sprintf("Attached =[ @(%s) ]=", k)
-			msg = tint.Init().Exp(msg, tint.Cyan.Bold())
-			fmt.Println(msg)
+			if !isExtensionMode {
+				msg := fmt.Sprintf("📦 Attached =[ @(%s) ]=", k)
+				msg = tint.Init().Exp(msg, tint.Cyan.Bold())
+				fmt.Println(msg)
+			}
 		}
 	}
+	return nil
+}
+
+func bootExtensions() error {
+	if len(app.extensions) == 0 {
+		return errors.New("No Rubik extensions plugged in")
+	}
+
+	sb := &App{
+		app:        *app,
+		CurrentURL: app.url,
+		RouteTree:  app.routeTree,
+	}
+
+	for _, exb := range app.extensions {
+		msg := fmt.Sprintf("\n🔌 Plugging extension @(%s)", exb.Name())
+		msg = tint.Init().Exp(msg, tint.Green.Bold())
+		fmt.Println(msg)
+		err := exb.OnPlug(sb)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -257,39 +269,13 @@ func bootBlocks(blockList map[string]Block) error {
 // this functions boots /static route as its index
 // and points to the static directory inside this
 // project
-func bootStatic() {
+func bootStatic(isExtensionMode bool) {
 	if _, err := os.Stat(pkg.GetStaticFolderPath()); err == nil {
 		app.mux.ServeFiles("/static/*filepath", http.Dir("./static"))
-		if os.Getenv("RUBIK_ENV") != "test" {
-			pkg.BootMsg("/static")
+		if os.Getenv("RUBIK_ENV") != "test" && !isExtensionMode {
+			pkg.EmojiMsg("⚡️", "/static")
 		}
 	}
-}
-
-// bootGuard is a method that verifies the following this
-//
-// -> calls guard.Require() to check if the config
-// requirement is met by the implementer
-// -> calls guard.GetRealm() to check if the client
-// needs to be aware of an authorization method or not
-// -> calls guard.Authorize() only after evaluating
-// both the above function
-func bootGuard(
-	w http.ResponseWriter, g AuthorizationGuard, placebo *App, headers http.Header) error {
-	if g.Require() != "" {
-		val := app.intermConfig.Get(g.Require())
-		if val == nil {
-			msg := fmt.Sprintf("No config object [%s]",
-				g.Require())
-			return errors.New(msg)
-		}
-	}
-
-	if g.GetRealm() != "" {
-		w.Header().Set("WWW-Authenticate", g.GetRealm())
-	}
-
-	return g.Authorize(placebo, headers)
 }
 
 func bootMiddlewares() {}
@@ -353,27 +339,5 @@ func dispatchHooks(hooks []RequestHook, rc *HookContext) {
 		for _, h := range hooks {
 			h(rc)
 		}
-	}
-}
-
-// bootMessageListener scaffolds a reciever for inherent rubik channels
-// currently used channels for rubik message passing are
-//
-// 1. Dispatch,Message
-// 2. Dispatch.Error
-func bootMessageListener() {
-	select {
-	case msg := <-Dispatch.Message:
-		tag := T(msg.Communicator, msg.Topic)
-		if app.msgRegistry[tag].ctl == nil {
-			msg := fmt.Sprintf("A message was dispatched for %s block, but no receiver found", tag)
-			pkg.WarnMsg(msg)
-		} else {
-			go app.msgRegistry[tag].ctl(&Request{Entity: msg.Body})
-		}
-		break
-	case err := <-Dispatch.Error:
-		pkg.ErrorMsg(err.Error())
-		break
 	}
 }

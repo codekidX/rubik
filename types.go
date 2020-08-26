@@ -38,6 +38,12 @@ var Content = struct {
 	"multipart/form-data",
 }
 
+var StringByteTypeMap = map[string]ByteType{
+	"json": Type.JSON,
+	"html": Type.HTML,
+	"text": Type.Text,
+}
+
 type rx struct {
 	ctl Controller
 	en  interface{}
@@ -70,41 +76,20 @@ type ByteResponse struct {
 
 // Validation is validation operations to be performed
 // on the request entity
-type Validation map[string]string
+type Validation map[string][]Assertion
 
 // SessionManager is an interface contract that rubik.Session uses
-//
-// // Anything abiding by this contract can
-// type SessionManager interface {
-// 	Get(string) string
-// 	Set(string, string) error
-// 	Delete(string) bool
-// }
+// Anything abiding by this contract can
+type SessionManager interface {
+	Get(string) string
+	Set(string, string) error
+	Delete(string) bool
+}
 
 // Communicator interface is used to handle the service/driver that
 // rubik's inherent communication depends upon
 type Communicator interface {
 	Send(string, interface{}) error
-}
-
-// AuthorizationGuard defines the requirement of a rubik route guard
-// Guards are generally used to negate the request, eg: JWT, ACL etc..
-// The implementation for a guard should be transparent with specifiction
-// of realm and config requirement.
-// For more information take a look at the BasicGuard implementation
-// here: https://github.com/rubikorg/blocks/blob/master/guard/basic.go
-type AuthorizationGuard interface {
-	// Require specifies the config requirement of your Guard
-	// this method must return the name of the config that is
-	// to be checked before setting the WWW-Authenticate header
-	Require() string
-	// Require must return the value of the realm to be set
-	// inside WWW-Authenticate header header
-	GetRealm() string
-	// Authorize holds the main authorization logic for a given guard
-	// NOTE: Rubik does not proceed with the request if this
-	// method returns an error. The error will denote HTTP Status: 401
-	Authorize(*App, http.Header) error
 }
 
 // Entity holds the data for a single API call
@@ -198,3 +183,15 @@ func (w *RResponseWriter) Write(b []byte) (int, error) {
 	w.written = true
 	return w.ResponseWriter.Write(b)
 }
+
+// Assertion is the assert functions for rubiks validation cycle
+// it should return a message stating why validation failed and
+// bool indicating if assertion has passed or not
+type Assertion func(interface{}) error
+
+// Modifier lets you modify the parameters passed through the request.
+// The input of the modifier is the value from the wire and the output
+// is the modified value.
+// Note: Modified value type must match the type declared in the
+// entity.
+// type Modifier func(interface{}) interface{}

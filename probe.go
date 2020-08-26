@@ -32,26 +32,29 @@ func NewProbe(ro Router) TestProbe {
 	// without inititializing the app or running the
 	// server
 	Use(ro)
-	boot(false)
+	boot(false, false)
 	p := TestProbe{}
 	p.app = app
 	return p
 }
 
-// Test a route with method, path to request, Entity (if used) and the controller to test
-func (p TestProbe) Test(method, path string, reqBody io.Reader, en interface{},
-	ctl Controller) (*http.Request, *httptest.ResponseRecorder) {
+// TestSimple a route with method, path to request, Entity (if used) and the controller to test
+func (p TestProbe) TestSimple(r Route, en interface{}, ctl Controller) *httptest.ResponseRecorder {
+	method := "GET"
+	if r.Method != "" {
+		method = r.Method
+	}
 
-	req := httptest.NewRequest(method, path, reqBody)
+	req := httptest.NewRequest(method, r.Path, nil)
 	rr := httptest.NewRecorder()
 	rubikReq := Request{
 		Entity: en,
 		Raw:    req,
 		Writer: RResponseWriter{ResponseWriter: rr},
 	}
-
 	ctl(&rubikReq)
-	return req, rr
+
+	return rr
 }
 
 // TestHandler is a probe util function to test your handler if you are not using a
@@ -61,8 +64,7 @@ func (p TestProbe) TestHandler(method, path string, reqBody io.Reader, en interf
 
 	req := httptest.NewRequest(method, path, reqBody)
 	rr := httptest.NewRecorder()
-
 	h.ServeHTTP(rr, req)
-	return req, rr
 
+	return req, rr
 }

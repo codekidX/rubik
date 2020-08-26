@@ -1,5 +1,8 @@
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/dgrijalva/jwt-go v1.0.2 h1:KPldsxuKGsS2FPWsNeg9ZO18aCrGKujPoWXn2yo+KQM=
+github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
+github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/jordan-wright/email v0.0.0-20200521030443-c069f37d901d/go.mod h1:Fy2gCFfZhay8jplf/Csj6cyH/oshQTkLQYZbKkcV+SY=
 github.com/julienschmidt/httprouter v1.3.0 h1:U0609e9tgbseu3rBINet9P48AI/D3oJs4dN7jwJOQ1U=
 github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
@@ -11,7 +14,10 @@ github.com/rubikorg/blocks v0.0.0-20200320142242-f0eb666c9c44 h1:cb6sLEWEHVspnAP
 github.com/rubikorg/blocks v0.0.0-20200320142242-f0eb666c9c44/go.mod h1:69qJ18WGHys0jL96nZjLiL3vLWq9e7tzuGAVQzCjQQQ=
 github.com/rubikorg/blocks v0.0.0-20200601012436-86932686afcc h1:NjpWkZFyh1BBRlyMkjWLHzhkidJJ7xetdfPW3jp8xL0=
 github.com/rubikorg/blocks v0.0.0-20200601012436-86932686afcc/go.mod h1:sK0dkkoCeHkkO5ZWUb15TP0TE158S7+UlM1jgJIMArw=
+github.com/rubikorg/blocks v0.0.0-20200601013819-5d2466a020c8 h1:O+2+sKjYHxxjUGpPxMTkj5nTP3bkrPFEtmuQbYCKDOg=
+github.com/rubikorg/blocks v0.0.0-20200601013819-5d2466a020c8/go.mod h1:OeXF/I/k9a0Bn1kyGlEdYOzml/0fG6WU6UkEWcYU7fg=
 github.com/rubikorg/rubik v0.0.0-20200530203613-7087986886cc/go.mod h1:C6FosWVP314zYfxUJyqXv/9S6eHGwua2pPHOhLIc9UI=
+github.com/rubikorg/rubik v0.0.0-20200601011723-1a305bdacac5/go.mod h1:C6FosWVP314zYfxUJyqXv/9S6eHGwua2pPHOhLIc9UI=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.etcd.io/bbolt v1.3.4/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

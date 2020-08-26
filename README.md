@@ -1,6 +1,7 @@
 <img src="https://avatars3.githubusercontent.com/u/61872650?s=120&v=4">
 
 # Rubik
+
 ## An efficient, scalable Web Framework
 
 [Homepage](https://rubikorg.github.io) - [API Documentation](https://pkg.go.dev/github.com/rubikorg/rubik?tab=doc)
@@ -9,7 +10,7 @@ For writing REST client and server-side applications faster. It provides a plugg
 layer of abstraction over `net/http` and enables automation of development environment through extensive tooling.
 
 Even though the goal of Rubik is set it'll take a lot of time to achieve it, that being said you must
-not use this framework for any production use **yet**. There can be a lot of edge cases missed and 
+not use this framework for any production use **yet**. There can be a lot of edge cases missed and
 bug fixes beyond the grasps which needs to be fixed before it is **production ready**.
 
 ### Framework Components
@@ -21,16 +22,21 @@ bug fixes beyond the grasps which needs to be fixed before it is **production re
 ### Quickstart
 
 - Install Rubik CLI _(supports Linux and OSX 64-bit versions only)_
+
 ```bash
 curl https://rubik.ashishshekar.com/install | sh
 ```
+
 - Create a new project
+
 ```bash
-okrubik create
+okrubik new hello-world
 ```
+
 - Change directory to your project name & run the project
+
 ```bash
-cd ${project}
+cd hello-world
 okrubik run
 ```
 
