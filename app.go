@@ -172,7 +172,6 @@ func (req Request) Config(accessor string) interface{} {
 // [ Entity check --- Guard() --- Validation() --- []Middlewares()
 // --- Controller() ]
 type Route struct {
-	corsOpts             CORSOptions
 	Path                 string
 	Method               string
 	Description          string
