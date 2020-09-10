@@ -83,7 +83,8 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 					BelongsTo:   strings.ReplaceAll(router.basePath, "/", ""),
 					Entity:      route.Entity,
 					Description: route.Description,
-					Path:        finalPath,
+					Path:        safeRoutePath(route.Path),
+					FullPath:    finalPath,
 					Method:      route.Method,
 					Responses:   route.ResponseDeclarations,
 				}

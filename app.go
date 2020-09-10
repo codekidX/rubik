@@ -172,7 +172,6 @@ func (req Request) Config(accessor string) interface{} {
 // [ Entity check --- Guard() --- Validation() --- []Middlewares()
 // --- Controller() ]
 type Route struct {
-	corsOpts             CORSOptions
 	Path                 string
 	Method               string
 	Description          string
@@ -194,6 +193,7 @@ type RouteTree struct {
 
 // RouteInfo is a flat structure for processing information about the routes
 type RouteInfo struct {
+	FullPath    string
 	Path        string
 	Description string
 	BelongsTo   string
