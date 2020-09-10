@@ -2,7 +2,7 @@
 
 # Rubik
 
-## An efficient, scalable Web Framework
+## A fast, efficient, scalable Web Framework
 
 [Homepage](https://rubikorg.github.io) - [API Documentation](https://pkg.go.dev/github.com/rubikorg/rubik?tab=doc)
 
@@ -39,11 +39,6 @@ okrubik new hello-world
 cd hello-world
 okrubik run
 ```
-
-### Questions
-
-Co-ordination with suggestions, opinions and questions can be done through this  
-[Mailing list](https://groups.google.com/forum/#!forum/rubikorg)
 
 ### Contributing
 
