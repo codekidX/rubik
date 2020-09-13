@@ -77,6 +77,14 @@ var Dispatch = MessagePasser{
 	Error:   make(chan error),
 }
 
+var Log = struct {
+	E chan string
+	I chan string
+}{
+	E: make(chan string),
+	I: make(chan string),
+}
+
 const (
 	// Version of rubik
 	Version = "0.2.5"
@@ -487,7 +495,7 @@ func Run() error {
 		tomlUsed = env
 	}
 	fmt.Println("\n\nStarted development server on: " + app.url)
-	fmt.Printf("Rubik version %s, configured from \"%s.toml\"", Version, tomlUsed)
+	fmt.Printf("Rubik version %s, configured from \"%s.toml\"\n", Version, tomlUsed)
 
 	return http.ListenAndServe(app.url, app.mux)
 }

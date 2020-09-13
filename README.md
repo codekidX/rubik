@@ -15,7 +15,7 @@ bug fixes beyond the grasps which needs to be fixed before it is **production re
 
 ### Framework Components
 
--   Core \_(this repository)\_scripts
+-   Core _(this repository)_ scripts
 -   [CLI](https://github.com/rubikorg/okrubik)
 -   [Blocks](https://github.com/rubikorg/blocks)
 
@@ -48,8 +48,8 @@ We encourage you to read this [Contributing to Rubik Guidelines](https://github.
 
 -   [x] Make Rubik fun to work with!
 -   [ ] Provide a great tooling for Rubik
--   [ ] Make client-server development easier in Go
--   [ ] Concurrent messgage passing
+-   [ ] Make client-server development easier and faster
+-   [ ] Concurrent message passing
 
 ### Things Rubik can't do yet
 

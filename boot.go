@@ -50,6 +50,8 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // 3. bootStatic()
 // 4. bootRoutes()
 func boot(isREPLMode bool, isExtensionMode bool) error {
+	go bootLogChannel()
+
 	if !isREPLMode {
 		handle404Response()
 		err := bootBlocks(app.blocks, isExtensionMode)
@@ -339,6 +341,17 @@ func dispatchHooks(hooks []RequestHook, rc *HookContext) {
 	if len(hooks) > 0 {
 		for _, h := range hooks {
 			h(rc)
+		}
+	}
+}
+
+func bootLogChannel() {
+	for {
+		select {
+		case errorMsg := <-Log.E:
+			fmt.Printf("[ERROR] %s\n", errorMsg)
+		case infoMsg := <-Log.I:
+			fmt.Printf("[INFO] %s\n", infoMsg)
 		}
 	}
 }
