@@ -64,7 +64,7 @@ var app = &rubik{
 		RouterList: make(map[string]string),
 		Routes:     []RouteInfo{},
 	},
-	extensions: []ExtensionBlock{},
+	extensions: []Plugin{},
 }
 
 var blocks = make(map[string]interface{})
@@ -77,6 +77,10 @@ var Dispatch = MessagePasser{
 	Error:   make(chan error),
 }
 
+// Log is a collection of channels of strings which are used to
+// stream logs into a folder called logs, where "E" channel
+// writes to $app.rubik.error.log and "I" channel writes to
+// $app.rubik.info.log file inside the logs/ folder
 var Log = struct {
 	E chan string
 	I chan string
@@ -149,7 +153,7 @@ type rubik struct {
 	routers      []Router
 	routeTree    RouteTree
 	dep          interface{}
-	extensions   []ExtensionBlock
+	extensions   []Plugin
 }
 
 // GetRouteTree returns a list of loaded routes in rubik
@@ -251,7 +255,7 @@ func GetBlock(symbol string) Block {
 }
 
 // Plug adds an extension of Rubik to your workflow
-func Plug(ext ExtensionBlock) {
+func Plug(ext Plugin) {
 	app.extensions = append(app.extensions, ext)
 }
 
@@ -485,7 +489,8 @@ func Run() error {
 	confPort := app.intermConfig.Get("port")
 	confHost := app.intermConfig.Get("host")
 	if confPort == nil || confHost == nil {
-		return errors.New("port and host must be defined inside config/default.toml or ${env}.toml")
+		msg := "port and host must be defined inside config/default.toml or ${env}.toml"
+		return errors.New(msg)
 	}
 
 	var tomlUsed string

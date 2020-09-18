@@ -259,6 +259,8 @@ func bootExtensions() error {
 		msg := fmt.Sprintf("\n🔌 Plugging extension @(%s)", exb.Name())
 		msg = tint.Init().Exp(msg, tint.Green.Bold())
 		fmt.Println(msg)
+
+		sb.blockName = exb.Name()
 		err := exb.OnPlug(sb)
 		if err != nil {
 			return err
