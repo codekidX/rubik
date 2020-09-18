@@ -294,7 +294,7 @@ func Load(config interface{}) error {
 	defaultConfigPath := filepath.Join(".", "config", "default.toml")
 	envConfigFound := false
 
-	if env != "" && env != "ext" {
+	if env != "" && env != "plugin" {
 		envConfigPath = filepath.Join(".", "config", env+".toml")
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
@@ -472,7 +472,7 @@ func Run() error {
 	env := os.Getenv("RUBIK_ENV")
 	// if you are in extentions mode run only extensions and exit
 	// do not run the server
-	if env != "" && strings.ToLower(env) == "ext" {
+	if env != "" && strings.ToLower(env) == "plugin" {
 		err = boot(false, true)
 		if err != nil {
 			return err
