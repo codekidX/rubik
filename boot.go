@@ -185,7 +185,7 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 	}
 
 	if isExtensionMode {
-		err := bootExtensions()
+		err := bootPlugin()
 		if err != nil {
 			return err
 		}
@@ -227,6 +227,7 @@ func bootBlocks(blockList map[string]Block, isExtensionMode bool) error {
 				blockName:  k,
 				CurrentURL: app.url,
 				RouteTree:  app.routeTree,
+				Args:       os.Getenv("RUBIK_ARGS"),
 			}
 
 			err := v.OnAttach(sb)
@@ -244,27 +245,40 @@ func bootBlocks(blockList map[string]Block, isExtensionMode bool) error {
 	return nil
 }
 
-func bootExtensions() error {
+func bootPlugin() error {
 	if len(app.extensions) == 0 {
 		return errors.New("No Rubik extensions plugged in")
 	}
 
+	// TODO: RUBIK_PROJ, RUBIK_ARGS should be inside a constants file for avoiding typo errors
 	sb := &App{
 		app:        *app,
 		CurrentURL: app.url,
 		RouteTree:  app.routeTree,
+		Project:    os.Getenv("RUBIK_PROJ"),
+		Args:       os.Getenv("RUBIK_ARGS"),
 	}
 
+	envPlugin := os.Getenv("RUBIK_PLUGIN")
+	var plugin Plugin
 	for _, exb := range app.extensions {
-		msg := fmt.Sprintf("\n🔌 Plugging extension @(%s)", exb.Name())
-		msg = tint.Init().Exp(msg, tint.Green.Bold())
-		fmt.Println(msg)
-
-		sb.blockName = exb.Name()
-		err := exb.OnPlug(sb)
-		if err != nil {
-			return err
+		if exb.RunID() == envPlugin {
+			plugin = exb
 		}
+	}
+
+	if plugin == nil {
+		return fmt.Errorf("%s plugin not plugged, Import this plugin in main.go file", envPlugin)
+	}
+
+	msg := fmt.Sprintf("\n🔌 Plugging extension @(%s)", plugin.Name())
+	msg = tint.Init().Exp(msg, tint.Green.Bold())
+	fmt.Println(msg)
+
+	sb.blockName = plugin.Name()
+	err := plugin.OnPlug(sb)
+	if err != nil {
+		return err
 	}
 
 	return nil

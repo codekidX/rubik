@@ -32,6 +32,7 @@ type Block interface {
 type Plugin interface {
 	OnPlug(*App) error
 	Name() string
+	RunID() string
 }
 
 // App is a sandboxed object used by the external blocks of code
@@ -41,10 +42,12 @@ type Plugin interface {
 // the ability to decode the config that it needs for
 // only this block of code to work
 type App struct {
-	blockName  string
-	app        rubik
-	CurrentURL string
 	RouteTree
+	app        rubik
+	blockName  string
+	CurrentURL string
+	Project    string
+	Args       string
 }
 
 // Decode decodes the internal rubik server config into the struct
