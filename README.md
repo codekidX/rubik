@@ -2,7 +2,7 @@
 
 # Rubik
 
-## An efficient, scalable Web Framework
+## A fast, efficient, scalable Web Framework
 
 [Homepage](https://rubikorg.github.io) - [API Documentation](https://pkg.go.dev/github.com/rubikorg/rubik?tab=doc)
 
@@ -15,35 +15,30 @@ bug fixes beyond the grasps which needs to be fixed before it is **production re
 
 ### Framework Components
 
-- Core _(this repository)_
-- [CLI](https://github.com/rubikorg/okrubik)
-- [Blocks](https://github.com/rubikorg/blocks)
+-   Core _(this repository)_ scripts
+-   [CLI](https://github.com/rubikorg/okrubik)
+-   [Blocks](https://github.com/rubikorg/blocks)
 
 ### Quickstart
 
-- Install Rubik CLI _(supports Linux and OSX 64-bit versions only)_
+-   Install Rubik CLI _(supports Linux and OSX 64-bit versions only)_
 
 ```bash
 curl https://rubik.ashishshekar.com/install | sh
 ```
 
-- Create a new project
+-   Create a new project
 
 ```bash
 okrubik new hello-world
 ```
 
-- Change directory to your project name & run the project
+-   Change directory to your project name & run the project
 
 ```bash
 cd hello-world
 okrubik run
 ```
-
-### Questions
-
-Co-ordination with suggestions, opinions and questions can be done through this  
-[Mailing list](https://groups.google.com/forum/#!forum/rubikorg)
 
 ### Contributing
 
@@ -51,14 +46,32 @@ We encourage you to read this [Contributing to Rubik Guidelines](https://github.
 
 ### Core Goals
 
-- [x] Make Rubik fun to work with!
-- [ ] Provide a great tooling for Rubik
-- [ ] Make client-server development easier in Go
-- [ ] Concurrent messgage passing
+-   [x] Make Rubik fun to work with!
+-   [ ] Provide a great tooling for Rubik
+-   [ ] Make client-server development easier and faster
+-   [ ] Concurrent message passing
 
 ### Things Rubik can't do yet
 
 Here is the [list](https://github.com/rubikorg/rubik/blob/master/_scripts/incomplete.md) of things that rubik can't do yet and needs fixing/development in these areas.
+
+### Some benchmarks
+
+> These are initial benchmarks without any
+
+```go
+$ wrk -t12 -c400 -d30s http://127.0.0.1:7000
+
+Running 30s test @ http://127.0.0.1:7000
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    30.34ms  114.16ms   1.81s    95.90%
+    Req/Sec     3.51k     2.98k   23.19k    67.13%
+  1023985 requests in 30.09s, 110.35MB read
+  Socket errors: connect 155, read 0, write 0, timeout 0
+Requests/sec:  34032.19
+Transfer/sec:      3.67MB
+```
 
 ### License
 

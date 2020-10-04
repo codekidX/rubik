@@ -44,11 +44,6 @@ var StringByteTypeMap = map[string]ByteType{
 	"text": Type.Text,
 }
 
-type rx struct {
-	ctl Controller
-	en  interface{}
-}
-
 // Message that is to be sent in communicator channel
 type Message struct {
 	Communicator string

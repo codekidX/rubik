@@ -50,6 +50,8 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // 3. bootStatic()
 // 4. bootRoutes()
 func boot(isREPLMode bool, isExtensionMode bool) error {
+	go bootLogChannel()
+
 	if !isREPLMode {
 		handle404Response()
 		err := bootBlocks(app.blocks, isExtensionMode)
@@ -83,7 +85,8 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 					BelongsTo:   strings.ReplaceAll(router.basePath, "/", ""),
 					Entity:      route.Entity,
 					Description: route.Description,
-					Path:        finalPath,
+					Path:        safeRoutePath(route.Path),
+					FullPath:    finalPath,
 					Method:      route.Method,
 					Responses:   route.ResponseDeclarations,
 				}
@@ -182,7 +185,7 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 	}
 
 	if isExtensionMode {
-		err := bootExtensions()
+		err := bootPlugin()
 		if err != nil {
 			return err
 		}
@@ -224,6 +227,7 @@ func bootBlocks(blockList map[string]Block, isExtensionMode bool) error {
 				blockName:  k,
 				CurrentURL: app.url,
 				RouteTree:  app.routeTree,
+				Args:       os.Getenv("RUBIK_ARGS"),
 			}
 
 			err := v.OnAttach(sb)
@@ -241,25 +245,40 @@ func bootBlocks(blockList map[string]Block, isExtensionMode bool) error {
 	return nil
 }
 
-func bootExtensions() error {
+func bootPlugin() error {
 	if len(app.extensions) == 0 {
 		return errors.New("No Rubik extensions plugged in")
 	}
 
+	// TODO: RUBIK_PROJ, RUBIK_ARGS should be inside a constants file for avoiding typo errors
 	sb := &App{
 		app:        *app,
 		CurrentURL: app.url,
 		RouteTree:  app.routeTree,
+		Project:    os.Getenv("RUBIK_PROJ"),
+		Args:       os.Getenv("RUBIK_ARGS"),
 	}
 
+	envPlugin := os.Getenv("RUBIK_PLUGIN")
+	var plugin Plugin
 	for _, exb := range app.extensions {
-		msg := fmt.Sprintf("\n🔌 Plugging extension @(%s)", exb.Name())
-		msg = tint.Init().Exp(msg, tint.Green.Bold())
-		fmt.Println(msg)
-		err := exb.OnPlug(sb)
-		if err != nil {
-			return err
+		if exb.RunID() == envPlugin {
+			plugin = exb
 		}
+	}
+
+	if plugin == nil {
+		return fmt.Errorf("%s plugin not plugged, Import this plugin in main.go file", envPlugin)
+	}
+
+	msg := fmt.Sprintf("\n🔌 Plugging extension @(%s)", plugin.Name())
+	msg = tint.Init().Exp(msg, tint.Green.Bold())
+	fmt.Println(msg)
+
+	sb.blockName = plugin.Name()
+	err := plugin.OnPlug(sb)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -338,6 +357,17 @@ func dispatchHooks(hooks []RequestHook, rc *HookContext) {
 	if len(hooks) > 0 {
 		for _, h := range hooks {
 			h(rc)
+		}
+	}
+}
+
+func bootLogChannel() {
+	for {
+		select {
+		case errorMsg := <-Log.E:
+			fmt.Printf("[ERROR] %s\n", errorMsg)
+		case infoMsg := <-Log.I:
+			fmt.Printf("[INFO] %s\n", infoMsg)
 		}
 	}
 }

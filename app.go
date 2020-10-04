@@ -64,7 +64,7 @@ var app = &rubik{
 		RouterList: make(map[string]string),
 		Routes:     []RouteInfo{},
 	},
-	extensions: []ExtensionBlock{},
+	extensions: []Plugin{},
 }
 
 var blocks = make(map[string]interface{})
@@ -75,6 +75,18 @@ var afterHooks []RequestHook
 var Dispatch = MessagePasser{
 	Message: make(chan Message),
 	Error:   make(chan error),
+}
+
+// Log is a collection of channels of strings which are used to
+// stream logs into a folder called logs, where "E" channel
+// writes to $app.rubik.error.log and "I" channel writes to
+// $app.rubik.info.log file inside the logs/ folder
+var Log = struct {
+	E chan string
+	I chan string
+}{
+	E: make(chan string),
+	I: make(chan string),
 }
 
 const (
@@ -141,7 +153,7 @@ type rubik struct {
 	routers      []Router
 	routeTree    RouteTree
 	dep          interface{}
-	extensions   []ExtensionBlock
+	extensions   []Plugin
 }
 
 // GetRouteTree returns a list of loaded routes in rubik
@@ -193,6 +205,7 @@ type RouteTree struct {
 
 // RouteInfo is a flat structure for processing information about the routes
 type RouteInfo struct {
+	FullPath    string
 	Path        string
 	Description string
 	BelongsTo   string
@@ -242,7 +255,7 @@ func GetBlock(symbol string) Block {
 }
 
 // Plug adds an extension of Rubik to your workflow
-func Plug(ext ExtensionBlock) {
+func Plug(ext Plugin) {
 	app.extensions = append(app.extensions, ext)
 }
 
@@ -281,7 +294,7 @@ func Load(config interface{}) error {
 	defaultConfigPath := filepath.Join(".", "config", "default.toml")
 	envConfigFound := false
 
-	if env != "" && env != "ext" {
+	if env != "" && env != "plugin" {
 		envConfigPath = filepath.Join(".", "config", env+".toml")
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
@@ -459,7 +472,7 @@ func Run() error {
 	env := os.Getenv("RUBIK_ENV")
 	// if you are in extentions mode run only extensions and exit
 	// do not run the server
-	if env != "" && strings.ToLower(env) == "ext" {
+	if env != "" && strings.ToLower(env) == "plugin" {
 		err = boot(false, true)
 		if err != nil {
 			return err
@@ -476,7 +489,8 @@ func Run() error {
 	confPort := app.intermConfig.Get("port")
 	confHost := app.intermConfig.Get("host")
 	if confPort == nil || confHost == nil {
-		return errors.New("port and host must be defined inside config/default.toml or ${env}.toml")
+		msg := "port and host must be defined inside config/default.toml or ${env}.toml"
+		return errors.New(msg)
 	}
 
 	var tomlUsed string
@@ -486,7 +500,7 @@ func Run() error {
 		tomlUsed = env
 	}
 	fmt.Println("\n\nStarted development server on: " + app.url)
-	fmt.Printf("Rubik version %s, configured from \"%s.toml\"", Version, tomlUsed)
+	fmt.Printf("Rubik version %s, configured from \"%s.toml\"\n", Version, tomlUsed)
 
 	return http.ListenAndServe(app.url, app.mux)
 }

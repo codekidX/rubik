@@ -25,13 +25,14 @@ type Block interface {
 	OnAttach(*App) error
 }
 
-// ExtensionBlock is executed plugins when RUBIK_ENV = ext.
+// Plugin is executed plugins when RUBIK_ENV = ext.
 // Blocks which requires access to server but does need the
 // server to run. To run your extention block use
 // `okrubik run --ext`
-type ExtensionBlock interface {
+type Plugin interface {
 	OnPlug(*App) error
 	Name() string
+	RunID() string
 }
 
 // App is a sandboxed object used by the external blocks of code
@@ -41,10 +42,12 @@ type ExtensionBlock interface {
 // the ability to decode the config that it needs for
 // only this block of code to work
 type App struct {
-	blockName  string
-	app        rubik
-	CurrentURL string
 	RouteTree
+	app        rubik
+	blockName  string
+	CurrentURL string
+	Project    string
+	Args       string
 }
 
 // Decode decodes the internal rubik server config into the struct
