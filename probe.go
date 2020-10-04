@@ -1,15 +1,22 @@
 package rubik
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 )
 
+// TestableEntity is an entity which can be probed by the Rubik probe
+// framework
+type TestableEntity interface {
+	Entity() interface{}
+	Path() string
+}
+
 // TestProbe is an abstraction for easily testing your rubik routes
 type TestProbe struct {
-	app *rubik
+	app    *rubik
+	router Router
 }
 
 // NewProbe returns a probe for testing your rubik server
@@ -26,45 +33,56 @@ type TestProbe struct {
 //			req, rr := probe.Test(en)
 //			if rr.Result().StatusCode != 200 { /* Something is wrong */}
 //		}
-func NewProbe(ro Router) TestProbe {
+func NewProbe(ro Router) *TestProbe {
 	os.Setenv("RUBIK_ENV", "test")
 	// boot only inits the routes of the rubik server
 	// without inititializing the app or running the
 	// server
+	var a = make(map[string]interface{})
 	Use(ro)
+	Load(&a)
 	boot(false, false)
 	p := TestProbe{}
 	p.app = app
-	return p
+	p.router = ro
+	return &p
 }
 
-// TestSimple a route with method, path to request, Entity (if used) and the controller to test
-func (p TestProbe) TestSimple(r Route, en interface{}, ctl Controller) *httptest.ResponseRecorder {
-	method := "GET"
-	if r.Method != "" {
-		method = r.Method
-	}
+// Test will test your entity with given `testPath` on the given Rubik Router
+// to the probe using the rubik.NewProbe() func
+func (probe *TestProbe) Test(entity TestableEntity) *httptest.ResponseRecorder {
+	return probe.fetchResponse(entity)
+}
 
-	req := httptest.NewRequest(method, r.Path, nil)
+// TestAll performs the same operation as Test but performs it for given slice of
+// entities
+func (probe *TestProbe) TestAll(entities []TestableEntity) []*httptest.ResponseRecorder {
+	var allResponses []*httptest.ResponseRecorder
+	for _, e := range entities {
+		allResponses = append(allResponses, probe.fetchResponse(e))
+	}
+	return allResponses
+}
+
+func (probe *TestProbe) fetchResponse(entity TestableEntity) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
+	r := probe.getRouteFromEntity(entity)
+	req, _ := http.NewRequest(r.Method, probe.app.url+probe.router.basePath+entity.Path(), nil)
 	rubikReq := Request{
-		Entity: en,
+		Entity: entity,
 		Raw:    req,
 		Writer: RResponseWriter{ResponseWriter: rr},
 	}
-	ctl(&rubikReq)
 
+	r.Controller(&rubikReq)
 	return rr
 }
 
-// TestHandler is a probe util function to test your handler if you are not using a
-// rubik.Controller for your route and using UseHandler() to cast it
-func (p TestProbe) TestHandler(method, path string, reqBody io.Reader, en interface{},
-	h http.Handler) (*http.Request, *httptest.ResponseRecorder) {
-
-	req := httptest.NewRequest(method, path, reqBody)
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-
-	return req, rr
+func (probe *TestProbe) getRouteFromEntity(entity TestableEntity) Route {
+	for _, r := range probe.router.routes {
+		if entity.Path() == r.Path {
+			return r
+		}
+	}
+	return Route{}
 }
