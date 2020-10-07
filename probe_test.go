@@ -1,7 +1,6 @@
 package rubik
 
 import (
-	"io/ioutil"
 	"reflect"
 	"testing"
 )
@@ -9,16 +8,20 @@ import (
 var probe *TestProbe
 
 type Enn struct {
-	testPath string
-	Name     string
+	Entity
+	Name string
 }
 
-func (enn Enn) Entity() interface{} {
+func (enn Enn) CoreEntity() interface{} {
 	return enn
 }
 
+func (enn Enn) ComposedEntity() Entity {
+	return enn.Entity
+}
+
 func (enn Enn) Path() string {
-	return enn.testPath
+	return enn.Entity.PointTo
 }
 
 func init() {
@@ -50,23 +53,16 @@ func TestGetTestClient(t *testing.T) {
 
 func TestIndexRoute(t *testing.T) {
 	entity := Enn{
-		testPath: "/",
-		Name:     "ashish",
+		Name: "ashish",
 	}
+	entity.PointTo = "/"
 
 	rr := probe.Test(entity)
 	if rr.Result().StatusCode == 200 {
 		defer rr.Result().Body.Close()
-		b, err := ioutil.ReadAll(rr.Result().Body)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if string(b) != "Woohoo!" {
-			t.Errorf("Resp: %s is not wohoo", string(b))
-		} else {
-			t.Log("IT IS WHOOHOO")
+		resp := rr.Body.String()
+		if resp != "Woohoo!" {
+			t.Errorf("Resp: %s is not wohoo", resp)
 		}
 	}
 }

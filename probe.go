@@ -4,12 +4,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+
+	"github.com/rubikorg/rubik/pkg"
 )
 
 // TestableEntity is an entity which can be probed by the Rubik probe
 // framework
 type TestableEntity interface {
-	Entity() interface{}
+	ComposedEntity() Entity
+	CoreEntity() interface{}
 	Path() string
 }
 
@@ -67,7 +70,15 @@ func (probe *TestProbe) TestAll(entities []TestableEntity) []*httptest.ResponseR
 func (probe *TestProbe) fetchResponse(entity TestableEntity) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	r := probe.getRouteFromEntity(entity)
-	req, _ := http.NewRequest(r.Method, probe.app.url+probe.router.basePath+entity.Path(), nil)
+	pathSuffix := safeRoutePath(entity.Path())
+	if entity.Path() == "" {
+		pkg.DebugMsg("Test | entity.PointTo is empty, using / as the endpoint locator")
+		pathSuffix = "/"
+	}
+
+	finalPath := probe.app.url + safeRouterPath(probe.router.basePath) + pathSuffix
+
+	req, _ := http.NewRequest(getSafeMethod(r.Method), finalPath, nil)
 	rubikReq := Request{
 		Entity: entity,
 		Raw:    req,
@@ -85,4 +96,11 @@ func (probe *TestProbe) getRouteFromEntity(entity TestableEntity) Route {
 		}
 	}
 	return Route{}
+}
+
+func getSafeMethod(method string) string {
+	if method == "" {
+		return http.MethodGet
+	}
+	return method
 }
