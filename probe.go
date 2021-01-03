@@ -69,6 +69,10 @@ func (probe *TestProbe) TestAll(entities []TestableEntity) []*httptest.ResponseR
 
 func (probe *TestProbe) fetchResponse(entity TestableEntity) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
+	if entity == nil {
+		return rr
+	}
+
 	r := probe.getRouteFromEntity(entity)
 	pathSuffix := safeRoutePath(entity.Path())
 	if entity.Path() == "" {
