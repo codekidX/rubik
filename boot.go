@@ -271,7 +271,7 @@ func bootPlugin() error {
 		return fmt.Errorf("%s plugin not plugged, Import this plugin in main.go file", envPlugin)
 	}
 
-	msg := fmt.Sprintf("\n🔌 Plugging extension @(%s)", plugin.Name())
+	msg := fmt.Sprintf("\n🧩 Plugging extension @(%s)", plugin.Name())
 	msg = tint.Init().Exp(msg, tint.Green.Bold())
 	fmt.Println(msg)
 

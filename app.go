@@ -189,6 +189,7 @@ type Route struct {
 	Description          string
 	ResponseDeclarations map[int]string
 	JSON                 bool
+	Export               bool
 	Entity               interface{}
 	Guards               []Controller
 	Middlewares          []Controller

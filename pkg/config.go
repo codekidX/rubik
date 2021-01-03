@@ -9,11 +9,21 @@ import (
 
 // Project defines the struct representation of rubik.toml
 type Project struct {
-	Name         string `toml:"name"`
-	Path         string `toml:"path"`
-	Watchable    bool   `toml:"watch"`
-	Communicable bool   `toml:"communicate"`
-	Log          bool   `toml:"log"`
+	Name         string      `toml:"name"`
+	Path         string      `toml:"path"`
+	Watchable    bool        `toml:"watch"`
+	Communicable bool        `toml:"communicate"`
+	Log          bool        `toml:"log"`
+	Store        StoreConfig `toml:"store"`
+}
+
+// StoreConfig is the config of your data store for your application/service
+type StoreConfig struct {
+	Dialect  string `toml:"dialect"`
+	Protocol string `toml:"protocol"`
+	Host     string `toml:"host"`
+	Port     int    `toml:"port"`
+	Database string `toml:"database"`
 }
 
 // Config is the main config for your rubik runtime
