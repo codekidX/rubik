@@ -15,6 +15,7 @@ type Project struct {
 	Communicable bool        `toml:"communicate"`
 	Log          bool        `toml:"log"`
 	Store        StoreConfig `toml:"store"`
+	RunCommand   string      `toml:"run_command"`
 }
 
 // StoreConfig is the config of your data store for your application/service

@@ -515,7 +515,7 @@ func (req *Request) Respond(data interface{}, ofType ...ByteType) {
 	case Type.HTML:
 		s, ok := data.(string)
 		if !ok {
-			req.Throw(500, E("Error: cannot be written as string"))
+			req.Throw(500, E("Error: cannot be written as HTML"))
 			return
 		}
 		writeResponse(&req.Writer, 200, Content.HTML, []byte(s))
@@ -523,7 +523,7 @@ func (req *Request) Respond(data interface{}, ofType ...ByteType) {
 	case Type.Text:
 		s, ok := data.(string)
 		if !ok {
-			req.Throw(500, E("Error: cannot be written as string"))
+			req.Throw(500, E("Error: cannot be written as Text"))
 			return
 		}
 		writeResponse(&req.Writer, 200, Content.Text, []byte(s))

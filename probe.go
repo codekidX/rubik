@@ -38,11 +38,10 @@ type TestProbe struct {
 //		}
 func NewProbe(ro Router) *TestProbe {
 	os.Setenv("RUBIK_ENV", "test")
-	// boot only inits the routes of the rubik server
-	// without inititializing the app or running the
-	// server
 	var a = make(map[string]interface{})
+	// use the router in this package
 	Use(ro)
+	// load some default dummy config
 	Load(&a)
 	boot(false, false)
 	p := TestProbe{}
