@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
@@ -271,7 +272,7 @@ func bootPlugin() error {
 		return fmt.Errorf("%s plugin not plugged, Import this plugin in main.go file", envPlugin)
 	}
 
-	msg := fmt.Sprintf("\n🧩 Plugging extension @(%s)", plugin.Name())
+	msg := fmt.Sprintf("\n 🧩 Plugging extension @(%s)", plugin.Name())
 	msg = tint.Init().Exp(msg, tint.Green.Bold())
 	fmt.Println(msg)
 
@@ -368,6 +369,22 @@ func bootLogChannel() {
 			fmt.Printf("[ERROR] %s\n", errorMsg)
 		case infoMsg := <-Log.I:
 			fmt.Printf("[INFO] %s\n", infoMsg)
+		}
+	}
+}
+
+func bootPodRoutine() {
+	// we check if there is any config in the rubik workspace
+	if len(app.wsConfig.Pod) > 0 {
+		// if yes we mark our attendence to the pod saying that i just booted up
+		for _, v := range app.wsConfig.Pod {
+			c := NewClient(v, time.Second*30)
+			pie := punchInEn{
+				Workspace: app.wsConfig.ProjectName,
+				Service:   "?", //TODO: how to get current service name
+			}
+			pie.PointTo = "/punchin"
+			c.Post(pie)
 		}
 	}
 }

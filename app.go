@@ -143,7 +143,7 @@ type RequestHook func(*HookContext)
 type rubik struct {
 	config       interface{}
 	intermConfig ds.NotationMap
-	rootConfig   *pkg.Config
+	wsConfig     *pkg.WorkspaceConfig
 	logger       *pkg.Logger
 	currentEnv   string
 	url          string
@@ -283,6 +283,12 @@ func Load(config interface{}) error {
 
 		return errors.New(msg)
 	}
+
+	wsConfig, err := pkg.GetRubikConfig()
+	if err != nil {
+		return err
+	}
+	app.wsConfig = wsConfig
 
 	var defaultMap map[string]interface{}
 	var envMap map[string]interface{}

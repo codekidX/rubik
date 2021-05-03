@@ -52,8 +52,13 @@ func TestGetStaticPath(t *testing.T) {
 }
 
 func TestGetRubikConfig(t *testing.T) {
-	conf := GetRubikConfig()
-	if reflect.TypeOf(conf).Elem() != reflect.TypeOf(Config{}) {
+	conf, err := GetRubikConfig()
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	if reflect.TypeOf(conf).Elem() != reflect.TypeOf(WorskpaceConfig{}) {
 		t.Error("GetRubikConfig() did not return type of project Config")
 	}
 
@@ -65,7 +70,10 @@ func TestGetRubikConfig(t *testing.T) {
 func TestGetRubikConfig2(t *testing.T) {
 	p, _ := filepath.Abs("..")
 	os.Chdir(p)
-	conf := GetRubikConfig()
+	conf, err := GetRubikConfig()
+	if err != nil {
+		t.Error(err.Error())
+	}
 
 	if conf.ProjectName != "core" {
 		t.Error("GetRubikConfig() not reading the configs properly")

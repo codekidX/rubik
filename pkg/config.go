@@ -5,31 +5,22 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
+	"github.com/pkg/errors"
 )
 
 // Project defines the struct representation of rubik.toml
 type Project struct {
-	Name         string      `toml:"name"`
-	Path         string      `toml:"path"`
-	Watchable    bool        `toml:"watch"`
-	Communicable bool        `toml:"communicate"`
-	Log          bool        `toml:"log"`
-	Store        StoreConfig `toml:"store"`
-	RunCommand   string      `toml:"run_command"`
+	Name         string `toml:"name"`
+	Path         string `toml:"path"`
+	Watchable    bool   `toml:"watch"`
+	Communicable bool   `toml:"communicate"`
+	Log          bool   `toml:"log"`
+	RunCommand   string `toml:"run_command"`
 }
 
-// StoreConfig is the config of your data store for your application/service
-type StoreConfig struct {
-	Dialect  string `toml:"dialect"`
-	Protocol string `toml:"protocol"`
-	Host     string `toml:"host"`
-	Port     int    `toml:"port"`
-	Database string `toml:"database"`
-}
-
-// Config is the main config for your rubik runtime
+// WorkspaceConfig is the main WorkspaceConfig for your rubik runtime
 // this is declared inside a rubik.toml file
-type Config struct {
+type WorkspaceConfig struct {
 	ProjectName string `toml:"name"`
 	Module      string `toml:"module"`
 	IsFlat      bool   `toml:"flat"`
@@ -37,6 +28,7 @@ type Config struct {
 	Log         bool
 	App         []Project                    `toml:"app"`
 	X           map[string]map[string]string `toml:"x"`
+	Pod         map[string]string            `toml:"pod"`
 }
 
 var sep = string(os.PathSeparator)
@@ -59,19 +51,19 @@ func GetRubikConfigPath() string {
 }
 
 // GetRubikConfig returns Config: a structural representation of rubik.toml
-func GetRubikConfig() *Config {
+func GetRubikConfig() (*WorkspaceConfig, error) {
 	configPath := GetRubikConfigPath()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return &Config{}
+		return nil, errors.New("Not a rubik project")
 	}
 
-	var config Config
+	var config WorkspaceConfig
 	_, err := toml.DecodeFile(configPath, &config)
 	if err != nil {
 		WarnMsg("rubik.toml was found but could not parse it. Error: " + err.Error())
-		return &Config{}
+		return nil, errors.New("Cannot parse rubik.toml, please verify if it is valid TOML file")
 	}
-	return &config
+	return &config, nil
 }
 
 // MakeAndGetCacheDirPath returns rubik's cache dir

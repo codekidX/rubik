@@ -27,7 +27,11 @@ var cmdMap = map[string]func([]string) string{
 // we defined the selectCommand here. This saves the project path
 // used for evaluation
 func selectCommand(args []string) string {
-	config := pkg.GetRubikConfig()
+	config, err := pkg.GetRubikConfig()
+	if err != nil {
+		return err.Error()
+	}
+
 	var name string
 	if len(args) > 1 {
 		name = args[1]
