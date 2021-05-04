@@ -58,7 +58,7 @@ func TestGetRubikConfig(t *testing.T) {
 		return
 	}
 
-	if reflect.TypeOf(conf).Elem() != reflect.TypeOf(WorskpaceConfig{}) {
+	if reflect.TypeOf(conf).Elem() != reflect.TypeOf(WorkspaceConfig{}) {
 		t.Error("GetRubikConfig() did not return type of project Config")
 	}
 

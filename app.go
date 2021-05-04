@@ -125,7 +125,7 @@ type Request struct {
 	Claims  Claims
 }
 
-// Claims populates the JWT.MapClaims inteface
+// Claims populates the JWT.MapClaims interface
 type Claims interface{}
 
 // HookContext ...
@@ -141,19 +141,20 @@ type RequestHook func(*HookContext)
 
 // Rubik is the instance of Server which holds all the necessary information of apis
 type rubik struct {
-	config       interface{}
-	intermConfig ds.NotationMap
-	wsConfig     *pkg.WorkspaceConfig
-	logger       *pkg.Logger
-	currentEnv   string
-	url          string
-	mux          *httprouter.Router
-	blocks       map[string]Block
-	afterBlocks  map[string]Block
-	routers      []Router
-	routeTree    RouteTree
-	dep          interface{}
-	extensions   []Plugin
+	config         interface{}
+	intermConfig   ds.NotationMap
+	wsConfig       *pkg.WorkspaceConfig
+	logger         *pkg.Logger
+	currentEnv     string
+	url            string
+	mux            *httprouter.Router
+	blocks         map[string]Block
+	afterBlocks    map[string]Block
+	routers        []Router
+	routeTree      RouteTree
+	dep            interface{}
+	extensions     []Plugin
+	currentService string
 }
 
 // GetRouteTree returns a list of loaded routes in rubik
@@ -284,7 +285,7 @@ func Load(config interface{}) error {
 		return errors.New(msg)
 	}
 
-	wsConfig, err := pkg.GetRubikConfig()
+	wsConfig, err := pkg.GetWorkspaceConfig(filepath.Join("..", "..", "rubik.toml"))
 	if err != nil {
 		return err
 	}
@@ -353,7 +354,7 @@ func Load(config interface{}) error {
 		app.intermConfig.Assign(finalMap)
 	}
 
-	// irrespective of env found or not flatten the intermconfig
+	// irrespective of env found or not flatten the intermConfig
 	if app.intermConfig.Length() > 0 {
 		app.intermConfig.Flatten()
 	}
@@ -368,7 +369,7 @@ func Load(config interface{}) error {
 	return nil
 }
 
-// Create retuens a rubik.Router instance for using and grouping routes.
+// Create returns a rubik.Router instance for using and grouping routes.
 // It is generally used if you want to add routes under the same umbrella
 // prefix of this router. In Rubik it is used to group routes by domains/
 // responsibilities.
@@ -464,11 +465,13 @@ func SetNotFoundHandler(h http.Handler) {
 }
 
 // Run will make sure all dependencies are met, resolves config and it's conflicts with
-// respect to the RUBIC_ENV passed while executing. It boots all your blocks, middlewares
+// respect to the RUBIK_ENV passed while executing. It boots all your blocks, middlewares
 // message passing channels and port resolution; before starting the server.
 // If this method does not find PORT that is passed as the first argument or the
-// config/*RUBIC_ENV.toml then it startes at :8000.
-func Run() error {
+// config/*RUBIK_ENV.toml then it starts at :8000.
+func Run(serviceIdent string) error {
+	app.currentService = serviceIdent
+
 	var err error
 	v, err := strconv.ParseFloat(Version, 32)
 	if v > 1.0 {
@@ -548,7 +551,7 @@ func (req *Request) Respond(data interface{}, ofType ...ByteType) {
 // The ByteType parameter is optional as you can convert your
 // error into a JSON or plain text
 //
-// If you dont have an error object with you in the moment
+// If you don't have an error object with you in the moment
 // you can use rubik.E() to quickly wrap your string into an error
 // and pass it inside this function
 func (req *Request) Throw(status int, err error, btype ...ByteType) {
@@ -581,11 +584,11 @@ func Ctls(ctls ...Controller) []Controller {
 	return ctls
 }
 
-func defByteType(typs []ByteType) ByteType {
-	if len(typs) > 0 {
-		return typs[0]
+func defByteType(types []ByteType) ByteType {
+	if len(types) > 0 {
+		return types[0]
 	}
-	return Type.Text
+	return Type.JSON
 }
 
 func runRepl() {
