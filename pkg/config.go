@@ -8,24 +8,39 @@ import (
 	"github.com/pkg/errors"
 )
 
+// LoggingConfig is used by Rubik's Log channels to log out the
+// message provided by the developers in a stream mentioned by
+// the developer in the rubik.toml [[app.logging]] config
+//
+// Supported streams are stdout, stderr, file. Path is ignored
+// if one of the standard os stream and it is only used for file
+// stream.
+// Format supports formatting with the following placeholders
+// 		- () = Date format, $level and $message
+type LoggingConfig struct {
+	Stream      string `toml:"stream"`
+	ErrorStream string `toml:"err_stream"`
+	Path        string `toml:"path"`
+	Format      string `toml:"format"`
+}
+
 // Project defines the struct representation of rubik.toml
 type Project struct {
-	Name         string `toml:"name"`
-	Path         string `toml:"path"`
-	Watchable    bool   `toml:"watch"`
-	Communicable bool   `toml:"communicate"`
-	Log          bool   `toml:"log"`
-	RunCommand   string `toml:"run_command"`
+	Name         string        `toml:"name"`
+	Path         string        `toml:"path"`
+	Watchable    bool          `toml:"watch"`
+	Communicable bool          `toml:"communicate"`
+	RunCommand   string        `toml:"run_command"`
+	Logging      LoggingConfig `toml:"logging"`
 }
 
 // WorkspaceConfig is the main WorkspaceConfig for your rubik runtime
 // this is declared inside a rubik.toml file
 type WorkspaceConfig struct {
-	ProjectName string `toml:"name"`
-	Module      string `toml:"module"`
-	IsFlat      bool   `toml:"flat"`
-	MaxProcs    int    `toml:"maxprocs"`
-	Log         bool
+	ProjectName string                       `toml:"name"`
+	Module      string                       `toml:"module"`
+	IsFlat      bool                         `toml:"flat"`
+	MaxProcs    int                          `toml:"maxprocs"`
 	App         []Project                    `toml:"app"`
 	X           map[string]map[string]string `toml:"x"`
 	Pod         map[string]string            `toml:"pod"`
@@ -57,8 +72,14 @@ func GetRubikConfig() (*WorkspaceConfig, error) {
 		return nil, errors.New("Not a rubik project")
 	}
 
+	return GetWorkspaceConfig(configPath)
+}
+
+// GetWorkspaceConfig will give the decoded WorkspaceConfig type
+// if it can parse the rubik.toml with the given path
+func GetWorkspaceConfig(path string) (*WorkspaceConfig, error) {
 	var config WorkspaceConfig
-	_, err := toml.DecodeFile(configPath, &config)
+	_, err := toml.DecodeFile(path, &config)
 	if err != nil {
 		WarnMsg("rubik.toml was found but could not parse it. Error: " + err.Error())
 		return nil, errors.New("Cannot parse rubik.toml, please verify if it is valid TOML file")
