@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -17,7 +18,7 @@ import (
 
 // notFoundHandler implements http.Handler interface
 // it shows the error response as stacktrace and
-// decieds not to show on non-production env
+// decides not to show on non-production env
 type notFoundHandler struct{}
 
 // ServeHTTP is the implementation method of http.Handler
@@ -65,7 +66,7 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 	bootStatic(isExtensionMode)
 
 	//c.checkForConfig()
-	var errored bool
+	var didError bool
 	// write the boot sequence of the server
 	for _, router := range app.routers {
 		if !strings.Contains(router.basePath, "rubik") {
@@ -200,8 +201,8 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 		}
 	}
 
-	if errored {
-		return errors.New("BootError: error while running rubik boot sequence")
+	if didError {
+		return errors.New("BootError: error while running Rubik Boot Sequence (RBS)")
 	}
 
 	return nil
@@ -366,25 +367,119 @@ func bootLogChannel() {
 	for {
 		select {
 		case errorMsg := <-Log.E:
-			fmt.Printf("[ERROR] %s\n", errorMsg)
+			logMap := map[string]string{
+				"level":   "ERROR",
+				"message": errorMsg,
+			}
+			log(logMap)
+			// fmt.Printf("[ERROR] %s\n", )
 		case infoMsg := <-Log.I:
-			fmt.Printf("[INFO] %s\n", infoMsg)
+			logMap := map[string]string{
+				"level":   "INFO",
+				"message": infoMsg,
+			}
+			log(logMap)
+			// fmt.Printf("[INFO] %s\n", infoMsg)
 		}
 	}
 }
 
-func bootPodRoutine() {
+func log(data map[string]string) {
+	thisService := getCurrentServiceConfig()
+
+	// we log to stdout by default
+	if thisService.Logging.Stream == "" {
+		fmt.Printf("[%s] %s\n", data["level"], data["message"])
+		return
+	}
+
+	if thisService.Logging.Stream == "file" && thisService.Logging.Path == "" {
+		pkg.WarnMsg("rubik::Logging - stream is set to file but file path not provided")
+		return
+	}
+
+	if thisService.Logging.Stream == "file" {
+		var filePath string
+		if strings.Contains(thisService.Logging.Path, "$service") {
+			filePath = strings.Replace(thisService.Logging.Path, "$service", app.currentService, 1)
+		}
+
+		logPath, err := filepath.Abs(filePath)
+		if err != nil {
+			pkg.ErrorMsg(err.Error())
+			return
+		}
+
+		logDir := filepath.Dir(logPath)
+		if f, _ := os.Stat(logDir); f == nil {
+			err := os.MkdirAll(logDir, 0755)
+			if err != nil {
+				pkg.ErrorMsg(err.Error())
+				return
+			}
+		}
+
+		var text string
+		if thisService.Logging.Format == "" {
+			text = fmt.Sprintf("%s: %s", data["level"], data["message"])
+		} else {
+			text = strings.ReplaceAll(thisService.Logging.Format, "$level", data["level"])
+			text = strings.ReplaceAll(text, "$message", data["message"])
+			// TODO: append date in format which is inside () and remove ()
+		}
+
+		file, err := openOrCreateFile(logPath)
+		if err != nil {
+			pkg.ErrorMsg(err.Error())
+			return
+		}
+		defer file.Close()
+
+		_, err = file.WriteString(text + "\n")
+		if err != nil {
+			pkg.ErrorMsg(err.Error())
+		}
+	}
+}
+
+func openOrCreateFile(path string) (*os.File, error) {
+	if f, _ := os.Stat(path); f == nil {
+		return os.Create(path)
+	}
+	return os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+}
+
+func bootPodRoutine() error {
 	// we check if there is any config in the rubik workspace
 	if len(app.wsConfig.Pod) > 0 {
-		// if yes we mark our attendence to the pod saying that i just booted up
+		// if yes we mark our attendance to the pod saying that i just booted up
 		for _, v := range app.wsConfig.Pod {
 			c := NewClient(v, time.Second*30)
 			pie := punchInEn{
 				Workspace: app.wsConfig.ProjectName,
-				Service:   "?", //TODO: how to get current service name
+				Service:   app.currentService,
+				Host:      app.intermConfig.Get("host").(string),
+				Port:      fmt.Sprintf(":%d", app.intermConfig.Get("port").(int)),
 			}
 			pie.PointTo = "/punchin"
-			c.Post(pie)
+			resp, err := c.Post(pie)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Pod -> %s", resp.StringBody)
 		}
 	}
+
+	return nil
+}
+
+func getCurrentServiceConfig() pkg.Project {
+	for _, p := range app.wsConfig.App {
+		if p.Name == app.currentService {
+			return p
+		}
+	}
+
+	return pkg.Project{}
 }
