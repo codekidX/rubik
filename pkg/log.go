@@ -27,8 +27,8 @@ func WarnMsg(message string) {
 
 // ErrorMsg appends a error before the log message
 func ErrorMsg(message string) {
-	template := "@( ERROR ) " + message
-	fmt.Println(t.Exp(template, tint.BgRed.Add(tint.White.Bold())))
+	template := "@([)@(ERROR)@(]) " + message
+	fmt.Println(t.Exp(template, tint.White.Bold(), tint.Red, tint.Normal.Bold()))
 }
 
 // EmojiMsg writes the booting message to stdout
