@@ -14,14 +14,14 @@ import (
 //
 // Supported streams are stdout, stderr, file. Path is ignored
 // if one of the standard os stream and it is only used for file
-// stream.
+// stream. err_path is used to stream log files with Error Level
 // Format supports formatting with the following placeholders
 // 		- () = Date format, $level and $message
 type LoggingConfig struct {
-	Stream      string `toml:"stream"`
-	ErrorStream string `toml:"err_stream"`
-	Path        string `toml:"path"`
-	Format      string `toml:"format"`
+	Stream    string `toml:"stream"`
+	Path      string `toml:"path"`
+	ErrorPath string `toml:"err_path"`
+	Format    string `toml:"format"`
 }
 
 // Project defines the struct representation of rubik.toml

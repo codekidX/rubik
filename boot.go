@@ -398,47 +398,12 @@ func log(data map[string]string) {
 		return
 	}
 
+	if thisService.Logging.ErrorPath != "" && strings.ToLower(data["level"]) == "error" {
+		writeLog(errFilePath, thisService, data)
+	}
+
 	if thisService.Logging.Stream == "file" {
-		var filePath string
-		if strings.Contains(thisService.Logging.Path, "$service") {
-			filePath = strings.Replace(thisService.Logging.Path, "$service", app.currentService, 1)
-		}
-
-		logPath, err := filepath.Abs(filePath)
-		if err != nil {
-			pkg.ErrorMsg(err.Error())
-			return
-		}
-
-		logDir := filepath.Dir(logPath)
-		if f, _ := os.Stat(logDir); f == nil {
-			err := os.MkdirAll(logDir, 0755)
-			if err != nil {
-				pkg.ErrorMsg(err.Error())
-				return
-			}
-		}
-
-		var text string
-		if thisService.Logging.Format == "" {
-			text = fmt.Sprintf("%s: %s", data["level"], data["message"])
-		} else {
-			text = strings.ReplaceAll(thisService.Logging.Format, "$level", data["level"])
-			text = strings.ReplaceAll(text, "$message", data["message"])
-			// TODO: append date in format which is inside () and remove ()
-		}
-
-		file, err := openOrCreateFile(logPath)
-		if err != nil {
-			pkg.ErrorMsg(err.Error())
-			return
-		}
-		defer file.Close()
-
-		_, err = file.WriteString(text + "\n")
-		if err != nil {
-			pkg.ErrorMsg(err.Error())
-		}
+		writeLog(filePath, thisService, data)
 	}
 }
 
@@ -447,6 +412,44 @@ func openOrCreateFile(path string) (*os.File, error) {
 		return os.Create(path)
 	}
 	return os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+}
+
+func writeLog(path string, thisService pkg.Project, data map[string]string) {
+	logPath, err := filepath.Abs(path)
+	if err != nil {
+		pkg.ErrorMsg(err.Error())
+		return
+	}
+
+	logDir := filepath.Dir(logPath)
+	if f, _ := os.Stat(logDir); f == nil {
+		err := os.MkdirAll(logDir, 0755)
+		if err != nil {
+			pkg.ErrorMsg(err.Error())
+			return
+		}
+	}
+
+	var text string
+	if thisService.Logging.Format == "" {
+		text = fmt.Sprintf("%s: %s", data["level"], data["message"])
+	} else {
+		text = strings.ReplaceAll(thisService.Logging.Format, "$level", data["level"])
+		text = strings.ReplaceAll(text, "$message", data["message"])
+		// TODO: append date in format which is inside () and remove ()
+	}
+
+	file, err := openOrCreateFile(logPath)
+	if err != nil {
+		pkg.ErrorMsg(err.Error())
+		return
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(text + "\n")
+	if err != nil {
+		pkg.ErrorMsg(err.Error())
+	}
 }
 
 func bootPodRoutine() error {
