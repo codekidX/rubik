@@ -372,20 +372,38 @@ func bootLogChannel() {
 				"message": errorMsg,
 			}
 			log(logMap)
-			// fmt.Printf("[ERROR] %s\n", )
 		case infoMsg := <-Log.I:
 			logMap := map[string]string{
 				"level":   "INFO",
 				"message": infoMsg,
 			}
 			log(logMap)
-			// fmt.Printf("[INFO] %s\n", infoMsg)
+		case debugMsg := <-Log.D:
+			logMap := map[string]string{
+				"level":   "DEBUG",
+				"message": debugMsg,
+			}
+			log(logMap)
+		case warnMsg := <-Log.W:
+			logMap := map[string]string{
+				"level":   "WARN",
+				"message": warnMsg,
+			}
+			log(logMap)
 		}
 	}
 }
 
 func log(data map[string]string) {
 	thisService := getCurrentServiceConfig()
+	var filePath string
+	var errFilePath string
+	if strings.Contains(thisService.Logging.Path, "$service") {
+		filePath = strings.Replace(thisService.Logging.Path, "$service", app.currentService, 1)
+	}
+	if strings.Contains(thisService.Logging.ErrorPath, "$service") {
+		errFilePath = strings.Replace(thisService.Logging.ErrorPath, "$service", app.currentService, 1)
+	}
 
 	// we log to stdout by default
 	if thisService.Logging.Stream == "" {

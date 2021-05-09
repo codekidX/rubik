@@ -84,9 +84,13 @@ var Dispatch = MessagePasser{
 var Log = struct {
 	E chan string
 	I chan string
+	D chan string
+	W chan string
 }{
 	E: make(chan string),
 	I: make(chan string),
+	D: make(chan string),
+	W: make(chan string),
 }
 
 const (
