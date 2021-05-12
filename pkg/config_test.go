@@ -52,7 +52,7 @@ func TestGetStaticPath(t *testing.T) {
 }
 
 func TestGetRubikConfig(t *testing.T) {
-	conf, err := GetRubikConfig()
+	conf, err := GetWorkspaceConfig("../rubik.toml")
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -62,15 +62,13 @@ func TestGetRubikConfig(t *testing.T) {
 		t.Error("GetRubikConfig() did not return type of project Config")
 	}
 
-	if conf.ProjectName != "" {
-		t.Error("GetRubikConfig() returns some project name eventhough there is no rubik.toml here")
+	if conf.ProjectName == "" {
+		t.Error("GetRubikConfig() returns empty project name for a given rubik workspace")
 	}
 }
 
 func TestGetRubikConfig2(t *testing.T) {
-	p, _ := filepath.Abs("..")
-	os.Chdir(p)
-	conf, err := GetRubikConfig()
+	conf, err := GetWorkspaceConfig("../rubik.toml")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -80,9 +78,9 @@ func TestGetRubikConfig2(t *testing.T) {
 	}
 }
 
-func TestGetRubikConfig3(t *testing.T) {
+// func TestGetRubikConfig3(t *testing.T) {
 
-}
+// }
 
 func TestMakeAndGetCacheDirPath(t *testing.T) {
 	home, _ := os.UserHomeDir()

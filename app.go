@@ -71,12 +71,6 @@ var blocks = make(map[string]interface{})
 var beforeHooks []RequestHook
 var afterHooks []RequestHook
 
-// Dispatch is topic dispatcher of rubik server
-var Dispatch = MessagePasser{
-	Message: make(chan Message),
-	Error:   make(chan error),
-}
-
 // Log is a collection of channels of strings which are used to
 // stream logs into a folder called logs, where "E" channel
 // writes to $app.rubik.error.log and "I" channel writes to

@@ -42,7 +42,7 @@ func initTestRouter() Router {
 }
 
 func testIndexCtl(req *Request) {
-	req.Respond("Woohoo!")
+	req.Respond("Woohoo!", Type.Text)
 }
 
 func TestGetTestClient(t *testing.T) {

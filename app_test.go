@@ -20,7 +20,7 @@ func TestLoad(t *testing.T) {
 	var someMap map[string]interface{}
 	err := Load(&someMap)
 	if err != nil {
-		t.Error("Load() is throwing an error even when it didn't find default.toml")
+		t.Error(err.Error())
 	}
 
 	err = Load(someMap)

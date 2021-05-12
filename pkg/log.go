@@ -15,20 +15,20 @@ type Logger struct {
 
 // DebugMsg appends a debug before the log message
 func DebugMsg(message string) {
-	template := "@( DEBUG ) " + message
-	fmt.Println(t.Exp(template, tint.BgWhite.Add(tint.Black)))
+	template := "@([)@(DEBUG)@(]) " + message
+	fmt.Println(t.Exp(template, tint.White.Bold(), tint.Cyan, tint.White.Bold()))
 }
 
 // WarnMsg appends a warn before the log message
 func WarnMsg(message string) {
 	template := "@([)@(WARN)@(]) " + message
-	fmt.Println(t.Exp(template, tint.White.Bold(), tint.Yellow, tint.Normal.Bold()))
+	fmt.Println(t.Exp(template, tint.White.Bold(), tint.Yellow, tint.White.Bold()))
 }
 
 // ErrorMsg appends a error before the log message
 func ErrorMsg(message string) {
 	template := "@([)@(ERROR)@(]) " + message
-	fmt.Println(t.Exp(template, tint.White.Bold(), tint.Red, tint.Normal.Bold()))
+	fmt.Println(t.Exp(template, tint.White.Bold(), tint.Red, tint.White.Bold()))
 }
 
 // EmojiMsg writes the booting message to stdout
