@@ -69,7 +69,7 @@ func TestUse(t *testing.T) {
 
 func TestSetNotFoundHandler(t *testing.T) {
 	SetNotFoundHandler(notFoundHandler{})
-	// shoukd not panic
+	// should not panic
 	intr := recover()
 	if intr != nil {
 		err := intr.(error)

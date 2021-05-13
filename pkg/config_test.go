@@ -1,12 +1,61 @@
 package pkg
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/BurntSushi/toml"
 )
+
+func init() {
+	commands := make(map[string]map[string]string)
+	commands["test"] = map[string]string{
+		"cwd": "go test -cover ./...",
+		"pwd": "./Go/ink",
+	}
+	commands["storage"] = map[string]string{
+		"cwd": "go test -cover storage_test.go",
+		"pwd": "./Go/ink",
+	}
+
+	// we need to write a rubik.toml file for testing our
+	// workspace config
+	workspaceConf := WorkspaceConfig{
+		ProjectName: "rubiktest",
+		Module:      "rubiktest",
+		App: []Project{
+			{
+				Name:      "appOne",
+				Path:      "./cmd/appOne",
+				Watchable: false,
+				Logging: LoggingConfig{
+					Path:      "./Go/ink/logs/$service.log",
+					ErrorPath: "./Go/ink/logs/$service.error.log",
+					Stream:    "file",
+					Format:    "$level: (DD/MM/YYYY) $message",
+				},
+			},
+		},
+		X: commands,
+	}
+
+	var buf bytes.Buffer
+	enc := toml.NewEncoder(&buf)
+	err := enc.Encode(workspaceConf)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ioutil.WriteFile(filepath.Join("..", "..", "rubik.toml"), buf.Bytes(), 0755)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func TestGetTemplateFolderPath(t *testing.T) {
 	path := GetTemplateFolderPath()
