@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -398,16 +399,30 @@ func log(data map[string]string) {
 	thisService := getCurrentServiceConfig()
 	var filePath string
 	var errFilePath string
+	// replace service name
 	if strings.Contains(thisService.Logging.Path, "$service") {
 		filePath = strings.Replace(thisService.Logging.Path, "$service", app.currentService, 1)
 	}
+	// replace service name for error stream
 	if strings.Contains(thisService.Logging.ErrorPath, "$service") {
 		errFilePath = strings.Replace(thisService.Logging.ErrorPath, "$service", app.currentService, 1)
 	}
 
+	// get format of date from the (*)
+	if strings.Contains(thisService.Logging.Format, "(") &&
+		strings.Contains(thisService.Logging.Format, ")") {
+		r, _ := regexp.Compile("\\((.*?)\\)")
+		rDate := r.FindString(thisService.Logging.Format)
+		dateFormat := strings.ReplaceAll(rDate, "(", "")
+		dateFormat = strings.ReplaceAll(dateFormat, ")", "")
+		dateFormat = strings.Trim(dateFormat, " ")
+		formattedDate := time.Now().Format(dateFormat)
+		thisService.Logging.Format = strings.ReplaceAll(thisService.Logging.Format, rDate, formattedDate)
+	}
+
 	// we log to stdout by default
 	if thisService.Logging.Stream == "" {
-		fmt.Printf("[%s] %s\n", data["level"], data["message"])
+		fmt.Printf("%s: %s %s\n", data["level"], time.Now().String(), data["message"])
 		return
 	}
 
