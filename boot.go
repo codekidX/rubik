@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 	"github.com/printzero/tint"
@@ -54,6 +55,7 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // 4. bootRoutes()
 func boot(isREPLMode bool, isExtensionMode bool) error {
 	go bootLogChannel()
+	go bootWsProcessControl()
 
 	if !isREPLMode {
 		handle404Response()
@@ -518,4 +520,27 @@ func getCurrentServiceConfig() pkg.Project {
 	}
 
 	return pkg.Project{}
+}
+
+func bootWsProcessControl() {
+	for _, p := range app.wsConfig.App {
+		var sconf = make(map[string]interface{})
+		pconfPath, err := filepath.Abs(filepath.Join(p.Path, "..", "..", "..", p.Name, "config", app.currentEnv+".toml"))
+		if err != nil {
+			pkg.ErrorMsg(err.Error())
+			return
+		}
+		_, err = toml.DecodeFile(pconfPath, &sconf)
+		if err != nil {
+			pkg.ErrorMsg(err.Error())
+			return
+		}
+		if sconf["host"] == "localhost" {
+			sconf["host"] = "http://localhost"
+		}
+
+		Ipc.WsMap[p.Name] = fmt.Sprintf("%s:%d", sconf["host"], sconf["port"])
+	}
+
+	fmt.Println(Ipc.WsMap)
 }
