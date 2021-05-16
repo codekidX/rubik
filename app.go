@@ -296,12 +296,15 @@ func Load(config interface{}) error {
 	// set the current env to app.currentEnv
 	env := os.Getenv("RUBIK_ENV")
 	app.currentEnv = env
+	if app.currentEnv == "" {
+		app.currentEnv = "default"
+	}
 
-	defaultConfigPath := filepath.Join(".", "config", "default.toml")
+	defaultConfigPath := filepath.Join(".", "config", app.currentEnv+".toml")
 	envConfigFound := false
 
 	if env != "" && env != "plugin" {
-		envConfigPath = filepath.Join(".", "config", env+".toml")
+		envConfigPath = filepath.Join(".", "config", app.currentEnv+".toml")
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
 			// do this with logger
