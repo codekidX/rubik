@@ -20,7 +20,7 @@ import (
 // Blocks requires you to implement a method called
 // OnAttach. This method is called during rubik server
 // bootstrapper is run and requires you to return an error
-// if any complexity arrises in for your block to function
+// if any complexity arises in for your block to function
 type Block interface {
 	OnAttach(*App) error
 }
@@ -28,7 +28,7 @@ type Block interface {
 // Plugin is executed plugins when RUBIK_ENV = ext.
 // Blocks which requires access to server but does need the
 // server to run. To run your extention block use
-// `okrubik run --ext`
+// `okrubik run --plugin`
 type Plugin interface {
 	OnPlug(*App) error
 	Name() string
@@ -52,7 +52,7 @@ type App struct {
 
 // Decode decodes the internal rubik server config into the struct
 // that you provide. It returns error if the config is not
-// unmarshalable OR there if there is no config
+// un-marshalable OR there if there is no config
 // initialized by the given name parameter
 func (sb *App) Decode(name string, target interface{}) error {
 	// check for target is pointer or not

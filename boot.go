@@ -2,6 +2,7 @@ package rubik
 
 import (
 	"context"
+	"encoding/gob"
 	"fmt"
 	"net/http"
 	"os"
@@ -55,7 +56,7 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // 4. bootRoutes()
 func boot(isREPLMode bool, isExtensionMode bool) error {
 	go bootLogChannel()
-	go bootWsProcessControl()
+	bootWsProcessControl()
 
 	if !isREPLMode {
 		handle404Response()
@@ -539,8 +540,29 @@ func bootWsProcessControl() {
 			sconf["host"] = "http://localhost"
 		}
 
-		Ipc.WsMap[p.Name] = fmt.Sprintf("%s:%d", sconf["host"], sconf["port"])
+		Ipc.wsMap[p.Name] = fmt.Sprintf("%s:%d", sconf["host"], sconf["port"])
 	}
 
-	fmt.Println(Ipc.WsMap)
+	ipcRouter := Create("/rubik/msg")
+	rxRoute := Route{
+		Method:     http.MethodPost,
+		Path:       "/rx/:message",
+		Entity:     IpcRxEntity{},
+		Controller: ipcController,
+	}
+	ipcRouter.Add(rxRoute)
+}
+
+func ipcController(req *Request) {
+	rxEn := req.Entity.(*IpcRxEntity)
+	if regIpcHandler, ok := Ipc.msgRx[rxEn.Message]; ok {
+		dec := gob.NewDecoder(req.Raw.Body)
+		err := dec.Decode(regIpcHandler.Type)
+		if err != nil {
+			fmt.Printf("Error while decoding: %s\n", rxEn.Message)
+			return
+		}
+
+		regIpcHandler.Func(regIpcHandler.Type)
+	}
 }
