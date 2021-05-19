@@ -308,8 +308,8 @@ func Load(config interface{}) error {
 
 		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
 			// do this with logger
-			msg := fmt.Sprintf("ConfigNotFound: config file %s.toml does not exist",
-				env)
+			msg := fmt.Sprintf("ConfigNotFound: config file %s does not exist",
+				envConfigPath)
 			pkg.DebugMsg(msg)
 		} else {
 			envConfigFound = true
