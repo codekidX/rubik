@@ -9,7 +9,7 @@ import (
 type IpcRxEntity struct {
 	Entity
 	Message string      `rubik:"|param"`
-	Body    interface{} `rubik:|body`
+	Body    interface{} `rubik:"|body"`
 }
 
 // ByteType let's rubik know what type of bytes to send as response

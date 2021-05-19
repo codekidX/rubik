@@ -29,7 +29,7 @@ func (ipc ipcModem) Send(msgType string, service string, message interface{}) {
 			Message: msgType,
 			Body:    message,
 		}
-		ipcRxEn.PointTo = "/rubik/msg/rx"
+		ipcRxEn.PointTo = "/rubik/msg/rx/:message"
 		r, err := txClient.Post(ipcRxEn)
 		if err != nil {
 			fmt.Printf("Message: %s, failed. Response: %s\n", msgType, r.StringBody)
