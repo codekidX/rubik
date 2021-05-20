@@ -78,9 +78,29 @@ func TestGetRubikConfig2(t *testing.T) {
 	}
 }
 
-// func TestGetRubikConfig3(t *testing.T) {
+func TestGetRubikConfigSuccessCase(t *testing.T) {
+	os.Chdir("..")
+	conf, err := GetRubikConfig()
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
 
-// }
+	if len(conf.App) <= 0 {
+		t.Error("WorkspaceConfig is not being read properly. App slice length is <= 0")
+	}
+
+	os.Chdir("./pkg")
+}
+
+func TestGetRubikConfigErrorCase(t *testing.T) {
+	_, err := GetRubikConfig()
+	if err == nil {
+		t.Error("GetRubikConfig is not returning error even if there is no rubik.toml in pkg" +
+			" directory")
+		return
+	}
+}
 
 func TestMakeAndGetCacheDirPath(t *testing.T) {
 	home, _ := os.UserHomeDir()
