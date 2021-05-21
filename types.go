@@ -154,7 +154,7 @@ func (val Values) Set(key string, value interface{}) {
 	val[key] = value
 }
 
-// File used by ink to embbed file
+// File used by ink to embed file
 type File struct {
 	Path   string
 	OSFile *os.File
@@ -185,7 +185,7 @@ func (w *RResponseWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-// Assertion is the assert functions for rubiks validation cycle
+// Assertion is the assert functions for rubik's validation cycle
 // it should return a message stating why validation failed and
 // bool indicating if assertion has passed or not
 type Assertion func(interface{}) error

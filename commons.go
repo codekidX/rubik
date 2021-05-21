@@ -40,7 +40,7 @@ func substituteParam(path string, reqParams []string) (string, error) {
 	pathWithParams := path
 	dollarCount := getCountOfDollar(pathWithParams)
 	if len(reqParams) != dollarCount {
-		message := fmt.Sprintf("InkParamsSubstitutionError: ink was not able to substitute params because of params count mismatch - $ count: %d and params given: %d", dollarCount, len(reqParams))
+		message := fmt.Sprintf("RubikParamsSubstitutionError: ink was not able to substitute params because of params count mismatch - $ count: %d and params given: %d", dollarCount, len(reqParams))
 		return "", errors.New(message)
 	}
 	// we need a replaced path
