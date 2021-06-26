@@ -130,7 +130,7 @@ func inject(req *http.Request,
 			break
 		}
 
-		// this is for the validations the developer provieded
+		// this is for the validations the developer provided
 		if len(v) > 0 && len(v[field.Name]) != 0 {
 			for _, asrt := range v[field.Name] {
 				err := asrt(val)
@@ -148,8 +148,8 @@ func inject(req *http.Request,
 	return en, nil
 }
 
-func injectValueByType(val interface{}, elem reflect.Value, typ reflect.Kind) {
-	switch typ {
+func injectValueByType(val interface{}, elem reflect.Value, kind reflect.Kind) {
+	switch kind {
 	case reflect.String:
 		final, ok := val.(string)
 		if ok && elem.CanSet() {

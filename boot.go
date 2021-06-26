@@ -100,14 +100,14 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 
 				if !isREPLMode && !isExtensionMode {
 					if os.Getenv("RUBIK_ENV") != "test" {
-						pkg.EmojiMsg("✏️", finalPath)
+						pkg.EmojiMsg("", finalPath)
 					}
 				}
 			}
 
 			if route.Entity != nil {
 				if reflect.TypeOf(route.Entity).Kind() == reflect.Ptr {
-					return errors.New("rubik does not allowa pointer of your entity. used in: " +
+					return errors.New("Rubik does not allow pointer of your entity. used in: " +
 						finalPath)
 				}
 			}

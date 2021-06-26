@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -16,6 +17,16 @@ import (
 const (
 	rubikTag = "rubik"
 )
+
+func getValueByKind(val reflect.Value, kind reflect.Kind) string {
+	switch kind {
+	case reflect.Bool:
+		str := strconv.FormatBool(val.Bool())
+		return str
+	default:
+		return val.String()
+	}
+}
 
 func extract(en interface{}) (Payload, error) {
 	var payload = Payload{}
@@ -77,6 +88,8 @@ func extract(en interface{}) (Payload, error) {
 		}
 
 		switch transport {
+		case "param":
+			continue
 		case "body":
 			if payload.body == nil {
 				payload.body = Values{}
@@ -93,10 +106,9 @@ func extract(en interface{}) (Payload, error) {
 		case "query":
 			if payload.query == nil {
 				payload.query = url.Values{}
-				payload.query.Set(transportKey, value.String())
-			} else {
-				payload.query.Set(transportKey, value.String())
 			}
+			val := getValueByKind(value, value.Kind())
+			payload.query.Set(transportKey, val)
 			break
 		case "form":
 			if field.Type == reflect.TypeOf(File{}) {

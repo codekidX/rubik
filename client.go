@@ -65,13 +65,14 @@ type Payload struct {
 	body         Values
 	query        url.Values
 	formBody     *bytes.Buffer
+	rawBody      []byte
 	responseType interface{}
 	cancel       context.CancelFunc
 	context      context.Context
 	agent        string
 }
 
-// NewClient creates a new instance of ink client
+// NewClient creates a new instance of rubik client
 func NewClient(baseURL string, timeout time.Duration) *Client {
 	return &Client{
 		url: baseURL,
