@@ -23,7 +23,8 @@ var Type = struct {
 	Bytes        ByteType
 	templateHTML ByteType
 	templateText ByteType
-}{1, 2, 3, 4, 5, 6}
+	Gob          ByteType
+}{1, 2, 3, 4, 5, 6, 7}
 
 // Content is a struct that holds default values of Content-Type headers
 // it can be used throughout your rubik application for avoiding basic
@@ -105,6 +106,7 @@ type Entity struct {
 	JSON       bool
 	Infer      interface{}
 	Cookies    Values
+	RawBody    []byte
 }
 
 // GobEntity extends Entity and let's rubik know that this date is
