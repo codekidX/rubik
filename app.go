@@ -89,7 +89,7 @@ var Log = struct {
 
 const (
 	// Version of rubik
-	Version = "0.2.5"
+	Version = "0.3.0"
 )
 
 type tracer interface {
@@ -283,11 +283,11 @@ func Load(config interface{}) error {
 		return errors.New(msg)
 	}
 
-	wsConfig, err := pkg.GetWorkspaceConfig(filepath.Join("..", "..", "rubik.toml"))
-	if err != nil {
-		return err
-	}
-	app.wsConfig = wsConfig
+	// wsConfig, err := pkg.GetWorkspaceConfig(filepath.Join("..", "..", "rubik.toml"))
+	// if err != nil {
+	// 	return err
+	// }
+	// app.wsConfig = wsConfig
 
 	var defaultMap map[string]interface{}
 	var envMap map[string]interface{}
@@ -296,7 +296,11 @@ func Load(config interface{}) error {
 	// set the current env to app.currentEnv
 	env := os.Getenv("RUBIK_ENV")
 	app.currentEnv = env
-	if app.currentEnv == "" {
+
+	// TODO: remove the plugin condition from here -- don't need to
+	// specify if it is a plugin env as it should always pick
+	// default config
+	if app.currentEnv == "" || app.currentEnv == "plugin" {
 		app.currentEnv = "default"
 	}
 
