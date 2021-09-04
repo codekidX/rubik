@@ -56,7 +56,7 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // 4. bootRoutes()
 func boot(isREPLMode bool, isExtensionMode bool) error {
 	go bootLogChannel()
-	bootWsProcessControl()
+	// bootWsProcessControl()
 
 	if !isREPLMode {
 		handle404Response()

@@ -30,10 +30,14 @@ func (ipc ipcModem) Send(msgType string, service string, message interface{}) {
 			Body:    message,
 		}
 		ipcRxEn.PointTo = "/rubik/msg/rx/:message"
-		r, err := txClient.Post(ipcRxEn)
+		ipcRxEn.Params = []string{msgType}
+
+		_, err := txClient.Post(ipcRxEn)
 		if err != nil {
-			fmt.Printf("Message: %s, failed. Response: %s\n", msgType, r.StringBody)
+			pkg.ErrorMsg(err.Error())
 		}
+
+		fmt.Printf("Message: %s, published\n", msgType)
 		return
 	}
 	pkg.ErrorMsg(fmt.Sprintf("%s is not present in this workspace", service))
