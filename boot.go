@@ -2,17 +2,12 @@ package rubik
 
 import (
 	"context"
-	"encoding/gob"
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"reflect"
-	"regexp"
 	"strings"
-	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 	"github.com/printzero/tint"
@@ -55,7 +50,7 @@ func (nfh notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // 3. bootStatic()
 // 4. bootRoutes()
 func boot(isREPLMode bool, isExtensionMode bool) error {
-	go bootLogChannel()
+	// go bootLogChannel()
 	// bootWsProcessControl()
 
 	if !isREPLMode {
@@ -303,18 +298,12 @@ func bootStatic(isExtensionMode bool) {
 	}
 }
 
-func bootMiddlewares() {}
-
-func bootController() {}
-
 // handle404Response boots the notfounfHandler as mux.NotFound Handler
 func handle404Response() {
 	if app.mux.NotFound == nil {
 		app.mux.NotFound = notFoundHandler{}
 	}
 }
-
-func handleResponse(response interface{}) {}
 
 // TODO: make this cleaner and better
 // this method is used to write error stacktrace response if env is
@@ -364,205 +353,5 @@ func dispatchHooks(hooks []RequestHook, rc *HookContext) {
 		for _, h := range hooks {
 			h(rc)
 		}
-	}
-}
-
-func bootLogChannel() {
-	for {
-		select {
-		case errorMsg := <-Log.E:
-			logMap := map[string]string{
-				"level":   "ERROR",
-				"message": errorMsg,
-			}
-			log(logMap)
-		case infoMsg := <-Log.I:
-			logMap := map[string]string{
-				"level":   "INFO",
-				"message": infoMsg,
-			}
-			log(logMap)
-		case debugMsg := <-Log.D:
-			logMap := map[string]string{
-				"level":   "DEBUG",
-				"message": debugMsg,
-			}
-			log(logMap)
-		case warnMsg := <-Log.W:
-			logMap := map[string]string{
-				"level":   "WARN",
-				"message": warnMsg,
-			}
-			log(logMap)
-		}
-	}
-}
-
-func log(data map[string]string) {
-	thisService := getCurrentServiceConfig()
-	var filePath string
-	var errFilePath string
-	// replace service name
-	if strings.Contains(thisService.Logging.Path, "$service") {
-		filePath = strings.Replace(thisService.Logging.Path, "$service", app.currentService, 1)
-	}
-	// replace service name for error stream
-	if strings.Contains(thisService.Logging.ErrorPath, "$service") {
-		errFilePath = strings.Replace(thisService.Logging.ErrorPath, "$service", app.currentService, 1)
-	}
-
-	// get format of date from the (*)
-	if strings.Contains(thisService.Logging.Format, "(") &&
-		strings.Contains(thisService.Logging.Format, ")") {
-		r, _ := regexp.Compile("\\((.*?)\\)")
-		rDate := r.FindString(thisService.Logging.Format)
-		dateFormat := strings.ReplaceAll(rDate, "(", "")
-		dateFormat = strings.ReplaceAll(dateFormat, ")", "")
-		dateFormat = strings.Trim(dateFormat, " ")
-		formattedDate := time.Now().Format(dateFormat)
-		thisService.Logging.Format = strings.ReplaceAll(thisService.Logging.Format, rDate, formattedDate)
-	}
-
-	// we log to stdout by default
-	if thisService.Logging.Stream == "" {
-		fmt.Printf("%s: %s %s\n", data["level"], time.Now().String(), data["message"])
-		return
-	}
-
-	if thisService.Logging.Stream == "file" && thisService.Logging.Path == "" {
-		pkg.WarnMsg("rubik::Logging - stream is set to file but file path not provided")
-		return
-	}
-
-	if thisService.Logging.ErrorPath != "" && strings.ToLower(data["level"]) == "error" {
-		writeLog(errFilePath, thisService, data)
-	}
-
-	if thisService.Logging.Stream == "file" {
-		writeLog(filePath, thisService, data)
-	}
-}
-
-func openOrCreateFile(path string) (*os.File, error) {
-	if f, _ := os.Stat(path); f == nil {
-		return os.Create(path)
-	}
-	return os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
-}
-
-func writeLog(path string, thisService pkg.Project, data map[string]string) {
-	logPath, err := filepath.Abs(path)
-	if err != nil {
-		pkg.ErrorMsg(err.Error())
-		return
-	}
-
-	logDir := filepath.Dir(logPath)
-	if f, _ := os.Stat(logDir); f == nil {
-		err := os.MkdirAll(logDir, 0755)
-		if err != nil {
-			pkg.ErrorMsg(err.Error())
-			return
-		}
-	}
-
-	var text string
-	if thisService.Logging.Format == "" {
-		text = fmt.Sprintf("%s: %s", data["level"], data["message"])
-	} else {
-		text = strings.ReplaceAll(thisService.Logging.Format, "$level", data["level"])
-		text = strings.ReplaceAll(text, "$message", data["message"])
-		// TODO: append date in format which is inside () and remove ()
-	}
-
-	file, err := openOrCreateFile(logPath)
-	if err != nil {
-		pkg.ErrorMsg(err.Error())
-		return
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(text + "\n")
-	if err != nil {
-		pkg.ErrorMsg(err.Error())
-	}
-}
-
-func bootPodRoutine() error {
-	// we check if there is any config in the rubik workspace
-	if len(app.wsConfig.Pod) > 0 {
-		// if yes we mark our attendance to the pod saying that i just booted up
-		for _, v := range app.wsConfig.Pod {
-			c := NewClient(v, time.Second*30)
-			pie := punchInEn{
-				Workspace: app.wsConfig.ProjectName,
-				Service:   app.currentService,
-				Host:      app.intermConfig.Get("host").(string),
-				Port:      fmt.Sprintf(":%d", app.intermConfig.Get("port").(int)),
-			}
-			pie.PointTo = "/punchin"
-			resp, err := c.Post(pie)
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("Pod -> %s", resp.StringBody)
-		}
-	}
-
-	return nil
-}
-
-func getCurrentServiceConfig() pkg.Project {
-	for _, p := range app.wsConfig.App {
-		if p.Name == app.currentService {
-			return p
-		}
-	}
-
-	return pkg.Project{}
-}
-
-func bootWsProcessControl() {
-	for _, p := range app.wsConfig.App {
-		var sconf = make(map[string]interface{})
-		pconfPath, err := filepath.Abs(filepath.Join(p.Path, "..", "..", "..", p.Name, "config", app.currentEnv+".toml"))
-		if err != nil {
-			pkg.ErrorMsg(err.Error())
-			return
-		}
-		_, err = toml.DecodeFile(pconfPath, &sconf)
-		if err != nil {
-			pkg.ErrorMsg(err.Error())
-			return
-		}
-		if sconf["host"] == "localhost" {
-			sconf["host"] = "http://localhost"
-		}
-
-		Ipc.wsMap[p.Name] = fmt.Sprintf("%s:%d", sconf["host"], sconf["port"])
-	}
-
-	ipcRouter := Create("/rubik/msg")
-	rxRoute := Route{
-		Method:     http.MethodPost,
-		Path:       "/rx/:message",
-		Entity:     IpcRxEntity{},
-		Controller: ipcController,
-	}
-	ipcRouter.Add(rxRoute)
-}
-
-func ipcController(req *Request) {
-	rxEn := req.Entity.(*IpcRxEntity)
-	if regIpcHandler, ok := Ipc.msgRx[rxEn.Message]; ok {
-		dec := gob.NewDecoder(req.Raw.Body)
-		err := dec.Decode(regIpcHandler.Type)
-		if err != nil {
-			fmt.Printf("Error while decoding: %s\n", rxEn.Message)
-			return
-		}
-
-		regIpcHandler.Func(regIpcHandler.Type)
 	}
 }

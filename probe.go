@@ -83,7 +83,7 @@ func (probe *TestProbe) fetchResponse(entity TestableEntity) *httptest.ResponseR
 
 	req, _ := http.NewRequest(getSafeMethod(r.Method), finalPath, nil)
 	rubikReq := Request{
-		Entity: entity,
+		Entity: entity.CoreEntity(),
 		Raw:    req,
 		Writer: RResponseWriter{ResponseWriter: rr},
 	}

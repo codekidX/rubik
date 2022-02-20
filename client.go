@@ -20,7 +20,6 @@ import (
 type Client struct {
 	httpClient  http.Client
 	url         string
-	async       chan Response
 	Debug       bool
 	JWTSecret   string
 	BasicSecret string

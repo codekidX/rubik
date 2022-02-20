@@ -1,6 +1,8 @@
 package rubik_test
 
-import "github.com/rubikorg/rubik"
+import (
+	"github.com/rubikorg/rubik"
+)
 
 func ExampleE() {
 	r := rubik.Route{

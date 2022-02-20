@@ -141,7 +141,6 @@ type RequestHook func(*HookContext)
 type rubik struct {
 	config         interface{}
 	intermConfig   ds.NotationMap
-	wsConfig       *pkg.WorkspaceConfig
 	logger         *pkg.Logger
 	currentEnv     string
 	url            string
@@ -150,7 +149,6 @@ type rubik struct {
 	afterBlocks    map[string]Block
 	routers        []Router
 	routeTree      RouteTree
-	dep            interface{}
 	extensions     []Plugin
 	currentService string
 }

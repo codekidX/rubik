@@ -52,8 +52,8 @@ type App struct {
 
 // Decode decodes the internal rubik server config into the struct
 // that you provide. It returns error if the config is not
-// un-marshalable OR there if there is no config
-// initialized by the given name parameter
+// un-marshalable OR if there is no config initialized by the given
+// name parameter
 func (sb *App) Decode(name string, target interface{}) error {
 	// check for target is pointer or not
 	val := sb.app.intermConfig.Get(name)
@@ -64,6 +64,10 @@ func (sb *App) Decode(name string, target interface{}) error {
 	}
 
 	b, err := json.Marshal(val)
+	if err != nil {
+		return err
+	}
+
 	err = json.Unmarshal(b, target)
 	if err != nil {
 		return err
