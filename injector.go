@@ -18,7 +18,7 @@ import (
 // inject is the the entry point of request injection in rubik
 // an injection is a process of reading the
 func inject(req *http.Request,
-	pm httprouter.Params, en interface{}, v Validation) (interface{}, error) {
+	pm httprouter.Params, en interface{}) (interface{}, error) {
 	// lets check what type of request it is
 	ctype := req.Header.Get(Content.Header)
 	var body = make(map[string]interface{})
@@ -128,18 +128,6 @@ func inject(req *http.Request,
 				return nil, requiredError
 			}
 			break
-		}
-
-		// this is for the validations the developer provided
-		if len(v) > 0 && len(v[field.Name]) != 0 {
-			for _, asrt := range v[field.Name] {
-				err := asrt(val)
-				if err != nil && strings.Contains(err.Error(), "$") {
-					return nil, errors.New(strings.ReplaceAll(err.Error(), "$", field.Name))
-				} else if err != nil {
-					return nil, err
-				}
-			}
 		}
 
 		injectValueByType(val, value, field.Type.Kind())

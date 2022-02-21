@@ -122,23 +122,11 @@ func boot(isREPLMode bool, isExtensionMode bool) error {
 					Ctx:     make(map[string]interface{}),
 				}
 
-				if len(route.Guards) > 0 {
-					for _, g := range route.Guards {
-						g(&rubikReq)
-						if rubikReq.Writer.written {
-							hookCtx.Status = rubikReq.Writer.status
-							hookCtx.Response = rubikReq.Writer.data
-							go dispatchHooks(afterHooks, &hookCtx)
-							return
-						}
-					}
-				}
-
 				var en interface{}
 				if route.Entity != nil {
 					en = reflect.New(reflect.TypeOf(route.Entity)).Interface()
 					var err error
-					en, err = inject(req, ps, en, route.Validation)
+					en, err = inject(req, ps, en)
 					if err != nil {
 						writeResponse(&rubikWriter, 400, Content.Text, []byte(err.Error()))
 						return
