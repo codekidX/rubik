@@ -87,24 +87,24 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestGetConfig(t *testing.T) {
-	err := Load(&testConfig{})
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
+// func TestGetConfig(t *testing.T) {
+// 	err := Load(&testConfig{})
+// 	if err != nil {
+// 		t.Error(err.Error())
+// 		return
+// 	}
 
-	conf := GetConfig()
-	if conf == nil {
-		t.Error("GetConfig() returned nil")
-		return
-	}
-	t.Logf("%+v\n", conf)
-	_, ok := conf.(testConfig)
-	if !ok {
-		t.Error("GetConfig() not returning config of proper type as set while loading")
-	}
-}
+// 	conf := GetConfig()
+// 	if conf == nil {
+// 		t.Error("GetConfig() returned nil")
+// 		return
+// 	}
+// 	t.Logf("%+v\n", conf)
+// 	_, ok := conf.(testConfig)
+// 	if !ok {
+// 		t.Error("GetConfig() not returning config of proper type as set while loading")
+// 	}
+// }
 
 func TestCreate(t *testing.T) {
 	tRouter := Create("/")

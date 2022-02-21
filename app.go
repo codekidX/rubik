@@ -29,13 +29,11 @@
 package rubik
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -45,9 +43,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/BurntSushi/toml"
-
-	"github.com/rubikorg/blocks/ds"
 	"github.com/rubikorg/rubik/pkg"
 )
 
@@ -70,22 +65,6 @@ var app = &rubik{
 var blocks = make(map[string]interface{})
 var beforeHooks []RequestHook
 var afterHooks []RequestHook
-
-// Log is a collection of channels of strings which are used to
-// stream logs into a folder called logs, where "E" channel
-// writes to $app.rubik.error.log and "I" channel writes to
-// $app.rubik.info.log file inside the logs/ folder
-var Log = struct {
-	E chan string
-	I chan string
-	D chan string
-	W chan string
-}{
-	E: make(chan string),
-	I: make(chan string),
-	D: make(chan string),
-	W: make(chan string),
-}
 
 const (
 	// Version of rubik
@@ -139,8 +118,6 @@ type RequestHook func(*HookContext)
 
 // Rubik is the instance of Server which holds all the necessary information of apis
 type rubik struct {
-	config         interface{}
-	intermConfig   ds.NotationMap
 	logger         *pkg.Logger
 	currentEnv     string
 	url            string
@@ -156,20 +133,6 @@ type rubik struct {
 // GetRouteTree returns a list of loaded routes in rubik
 func (req Request) GetRouteTree() RouteTree {
 	return req.app.routeTree
-}
-
-// Config returns the configuration of your server  for a specific accessor
-func (req Request) Config(accessor string) interface{} {
-	val := req.app.intermConfig.Get(accessor)
-	if val == nil {
-		msg := fmt.Sprintf("MiddlewareAccessorError: cannot access %s from "+
-			"project config", accessor)
-		pkg.ErrorMsg(msg)
-
-		return nil
-	}
-
-	return val
 }
 
 // Route defines how a specific route route inside the Rubik server must behave.
@@ -188,9 +151,7 @@ type Route struct {
 	JSON                 bool
 	Export               bool
 	Entity               interface{}
-	Guards               []Controller
 	Middlewares          []Controller
-	Validation           Validation
 	Controller           Controller
 }
 
@@ -211,11 +172,6 @@ type RouteInfo struct {
 	IsJSON      bool
 	Method      string
 	Responses   map[int]string
-}
-
-// GetConfig returns the injected config from the Load method
-func GetConfig() interface{} {
-	return app.config
 }
 
 // Attach a block to rubik tree
@@ -280,94 +236,6 @@ func Load(config interface{}) error {
 
 		return errors.New(msg)
 	}
-
-	// wsConfig, err := pkg.GetWorkspaceConfig(filepath.Join("..", "..", "rubik.toml"))
-	// if err != nil {
-	// 	return err
-	// }
-	// app.wsConfig = wsConfig
-
-	var defaultMap map[string]interface{}
-	var envMap map[string]interface{}
-	var envConfigPath string
-
-	// set the current env to app.currentEnv
-	env := os.Getenv("RUBIK_ENV")
-	app.currentEnv = env
-
-	// TODO: remove the plugin condition from here -- don't need to
-	// specify if it is a plugin env as it should always pick
-	// default config
-	if app.currentEnv == "" || app.currentEnv == "plugin" {
-		app.currentEnv = "default"
-	}
-
-	defaultConfigPath := filepath.Join(".", "config", app.currentEnv+".toml")
-	envConfigFound := false
-
-	if env != "" && env != "plugin" {
-		envConfigPath = filepath.Join(".", "config", app.currentEnv+".toml")
-
-		if _, err := os.Stat(envConfigPath); os.IsNotExist(err) {
-			// do this with logger
-			msg := fmt.Sprintf("ConfigNotFound: config file %s does not exist",
-				envConfigPath)
-			pkg.DebugMsg(msg)
-		} else {
-			envConfigFound = true
-		}
-	}
-
-	app.intermConfig = ds.NewNotationMap()
-
-	if !envConfigFound {
-		// if no config files are there inside the config directory we cannot load
-		// any config inside the rubik app. so we don't have to error the user
-		// giving them the freedom to use rubik without the core feature
-		if _, err := os.Stat(defaultConfigPath); os.IsNotExist(err) {
-			return nil
-		}
-
-		_, err := toml.DecodeFile(defaultConfigPath, config)
-		// you can use envMap here since there is no env found and that assignment
-		// is not going anywhere until this scope ends we make use of the resources
-		_, err = toml.DecodeFile(defaultConfigPath, &envMap)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		app.intermConfig.Assign(envMap)
-	} else {
-		// now we need to override env config values with the default values
-		_, err := toml.DecodeFile(defaultConfigPath, &defaultMap)
-		_, err = toml.DecodeFile(envConfigPath, &envMap)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		finalMap := pkg.OverrideValues(defaultMap, envMap)
-		var buf bytes.Buffer
-		enc := toml.NewEncoder(&buf)
-		err = enc.Encode(&finalMap)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		err = toml.Unmarshal(buf.Bytes(), config)
-		app.intermConfig.Assign(finalMap)
-	}
-
-	// irrespective of env found or not flatten the intermConfig
-	if app.intermConfig.Length() > 0 {
-		app.intermConfig.Flatten()
-	}
-
-	app.config = reflect.ValueOf(config).Elem().Interface()
-	// before loading anything to interm config mark notation map as not editable
-	app.intermConfig.IsEditable(false)
-
-	// run on host and port mentioned inside the config
-	app.url = fmt.Sprintf("%v:%v", app.intermConfig.Get("host"), app.intermConfig.Get("port"))
 
 	return nil
 }
@@ -472,9 +340,7 @@ func SetNotFoundHandler(h http.Handler) {
 // message passing channels and port resolution; before starting the server.
 // If this method does not find PORT that is passed as the first argument or the
 // config/*RUBIK_ENV.toml then it starts at :8000.
-func Run(serviceIdent string) error {
-	app.currentService = serviceIdent
-
+func Run(host string, port int) error {
 	var err error
 	v, err := strconv.ParseFloat(Version, 32)
 	if v > 1.0 {
@@ -498,22 +364,10 @@ func Run(serviceIdent string) error {
 		return err
 	}
 
-	// load port from environ
-	confPort := app.intermConfig.Get("port")
-	confHost := app.intermConfig.Get("host")
-	if confPort == nil || confHost == nil {
-		msg := "port and host must be defined inside config/default.toml or ${env}.toml"
-		return errors.New(msg)
-	}
+	// run on given host and port
+	app.url = fmt.Sprintf("%v:%v", host, port)
 
-	var tomlUsed string
-	if env == "" || env == "development" {
-		tomlUsed = "default"
-	} else {
-		tomlUsed = env
-	}
 	fmt.Println("\n\nStarted development server on: " + app.url)
-	fmt.Printf("Rubik version %s, configured from \"%s.toml\"\n", Version, tomlUsed)
 
 	return http.ListenAndServe(app.url, app.mux)
 }

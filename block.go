@@ -1,13 +1,5 @@
 package rubik
 
-import (
-	"encoding/json"
-	"fmt"
-	"strings"
-
-	"github.com/pkg/errors"
-)
-
 // Block is an interface that can be implemented to provide
 // extended functionalities to rubik server
 // Think of it as a plugin which can be attached to the
@@ -54,33 +46,33 @@ type App struct {
 // that you provide. It returns error if the config is not
 // un-marshalable OR if there is no config initialized by the given
 // name parameter
-func (sb *App) Decode(name string, target interface{}) error {
-	// check for target is pointer or not
-	val := sb.app.intermConfig.Get(name)
-	msg := fmt.Sprintf("AppDecodeError: block =[ %s ]= requires you to specify "+
-		"%s object inside your config/.toml file", sb.blockName, name)
-	if val == nil {
-		return errors.New(msg)
-	}
+// func (sb *App) Decode(name string, target interface{}) error {
+// 	// check for target is pointer or not
+// 	val := sb.app.intermConfig.Get(name)
+// 	msg := fmt.Sprintf("AppDecodeError: block =[ %s ]= requires you to specify "+
+// 		"%s object inside your config/.toml file", sb.blockName, name)
+// 	if val == nil {
+// 		return errors.New(msg)
+// 	}
 
-	b, err := json.Marshal(val)
-	if err != nil {
-		return err
-	}
+// 	b, err := json.Marshal(val)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	err = json.Unmarshal(b, target)
-	if err != nil {
-		return err
-	}
+// 	err = json.Unmarshal(b, target)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // Config get config by name
-func (sb *App) Config(name string) interface{} {
-	if strings.Contains(name, ".") {
-		return nil
-	}
+// func (sb *App) Config(name string) interface{} {
+// 	if strings.Contains(name, ".") {
+// 		return nil
+// 	}
 
-	return sb.app.intermConfig.Get(name)
-}
+// 	return sb.app.intermConfig.Get(name)
+// }
