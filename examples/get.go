@@ -9,10 +9,9 @@ import (
 )
 
 func timer(rc *rubik.Context) {
-	rc.Add("timer_start", time.Now())
+	start := time.Now()
 	go func() {
 		<-rc.AfterChan
-		start := rc.Value("timer_start").(time.Time)
 		var d int64
 		var metric string
 		if time.Now().Sub(start).Milliseconds() <= 0 {
