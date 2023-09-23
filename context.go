@@ -9,7 +9,7 @@ import (
 
 type Context struct {
 	Request   *http.Request
-	Writer    http.ResponseWriter
+	writer    http.ResponseWriter
 	AfterChan chan struct{}
 
 	mu      *sync.RWMutex
@@ -130,8 +130,8 @@ func (c *Context) Add(key string, value any) {
 }
 
 func (c *Context) JSON(code int, data any) {
-	c.Writer.WriteHeader(code)
+	c.writer.WriteHeader(code)
 	b, _ := json.Marshal(data)
-	c.Writer.Write(b)
+	c.writer.Write(b)
 	c.written = true
 }

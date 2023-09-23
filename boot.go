@@ -39,9 +39,9 @@ func executor(route Route) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		rc := Context{
 			Request:   r,
-			Writer:    w,
 			AfterChan: make(chan struct{}),
 
+			writer: w,
 			extras: make(map[string]any),
 			mu:     &sync.RWMutex{},
 		}
