@@ -3,25 +3,28 @@ package rubik
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
 
 type Context struct {
 	Request   *http.Request
-	writer    http.ResponseWriter
 	AfterChan chan struct{}
 
-	mu      *sync.RWMutex
-	extras  map[string]any
-	written bool
+	writer   http.ResponseWriter
+	mu       *sync.RWMutex
+	extras   map[string]any
+	written  bool
+	err      error
+	deadline time.Time
 }
 
 // Deadline returns the time when work done on behalf of this context
 // should be canceled. Deadline returns ok==false when no deadline is
 // set. Successive calls to Deadline return the same results.
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
-	return time.Time{}, false
+	return
 }
 
 // Done returns a channel that's closed when work done on behalf of this
@@ -56,8 +59,7 @@ func (c *Context) Deadline() (deadline time.Time, ok bool) {
 // See https://blog.golang.org/pipelines for more examples of how to use
 // a Done channel for cancellation.
 func Done() <-chan struct{} {
-	c := make(chan struct{})
-	return c
+	return nil
 }
 
 // If Done is not yet closed, Err returns nil.
@@ -134,4 +136,21 @@ func (c *Context) JSON(code int, data any) {
 	b, _ := json.Marshal(data)
 	c.writer.Write(b)
 	c.written = true
+}
+
+func (c *Context) Text(code int, data string) {
+	c.writer.WriteHeader(code)
+	c.writer.Write([]byte(data))
+	c.written = true
+}
+
+func (c *Context) TryFile(code int, filePath string) error {
+	c.writer.WriteHeader(code)
+	b, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	c.writer.Write(b)
+	c.written = true
+	return nil
 }

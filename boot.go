@@ -45,10 +45,17 @@ func executor(route Route) httprouter.Handle {
 			extras: make(map[string]any),
 			mu:     &sync.RWMutex{},
 		}
+
+		// first run all before hooks
+		for _, bh := range app.beforeHooks {
+			bh(&rc)
+		}
+		// we come to the path responders
 		for _, responder := range route.Responders {
 			responder(&rc)
 			if rc.written {
 				rc.AfterChan <- struct{}{}
+				close(rc.AfterChan)
 				break
 			}
 		}

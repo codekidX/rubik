@@ -9,10 +9,16 @@ import (
 var app = &rubik{
 	mux:    *httprouter.New(),
 	routes: []Route{},
+
+	beforeHooks: []Responder{},
 }
 
 func Use(routes ...Route) {
 	app.routes = append(app.routes, routes...)
+}
+
+func BeforeHook(responder Responder) {
+	app.beforeHooks = append(app.beforeHooks, responder)
 }
 
 func Run() error {

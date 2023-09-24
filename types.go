@@ -3,9 +3,10 @@ package rubik
 import "github.com/julienschmidt/httprouter"
 
 type rubik struct {
-	mux    httprouter.Router
-	routes []Route
-	config *appConfig
+	mux         httprouter.Router
+	routes      []Route
+	config      *appConfig
+	beforeHooks []Responder
 }
 
 type Responder func(c *Context)
