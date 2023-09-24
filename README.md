@@ -8,14 +8,22 @@
 [API Documentation](https://pkg.go.dev/github.com/rubikorg/rubik?tab=doc)
 
 ```go
-func tellHello(rc *rubik.Context) {
-    rc.Text("Hello World")
+package main
+
+import "github.com/rubikorg/rubik"
+
+func helloResponder(rc *rubik.Context) {
+    rc.Text("hello!")
 }
 
-// GET
-rubik.GET("/", tellHello)
-// POST
-rubik.POST("/poster", tellHello)
+func main() {
+    // GET
+    rubik.GET("/", tellHello)
+    // POST
+    rubik.POST("/poster", tellHello)
+    // Start the server
+    rubik.Run()
+}
 ```
 
 ### License
