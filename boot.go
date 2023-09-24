@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/julienschmidt/httprouter"
@@ -16,39 +15,34 @@ func (app *rubik) loadConfig() (*appConfig, error) {
 	return nil, nil
 }
 
-func (app *rubik) boot() error {
-	for _, route := range app.routes {
-		for _, m := range route.Method {
-			// FIXME: we can save some time here if we ignore join here and
-			// concat inside this loop itself
-			app.routeTree.RouterList[route.Path] = strings.Join(route.Method, "|")
-			app.routeTree.Routes = append(app.routeTree.Routes, RouteInfo{
-				Path:        route.Path,
-				Description: route.Doc,
-				Method:      m,
-			})
-			switch m {
-			case http.MethodGet:
-				app.mux.GET(route.Path, executor(route))
-			case http.MethodPost:
-				app.mux.POST(route.Path, executor(route))
-			case http.MethodPut:
-				app.mux.PUT(route.Path, executor(route))
-			case http.MethodDelete:
-				app.mux.DELETE(route.Path, executor(route))
-			case http.MethodPatch:
-				app.mux.PATCH(route.Path, executor(route))
-			case http.MethodOptions:
-				app.mux.OPTIONS(route.Path, executor(route))
-			default:
-				continue
-			}
-		}
+func load(path, method string, responders []Responder) *RouteInfo {
+	ri := RouteInfo{
+		path:   path,
+		method: method,
 	}
-	return nil
+	app.routeTree.RouterList[path] = path
+	app.routeTree.Routes = append(app.routeTree.Routes, &ri)
+
+	switch method {
+	case http.MethodGet:
+		app.mux.GET(path, executor(path, responders))
+	case http.MethodPost:
+		app.mux.POST(path, executor(path, responders))
+	case http.MethodPut:
+		app.mux.PUT(path, executor(path, responders))
+	case http.MethodDelete:
+		app.mux.DELETE(path, executor(path, responders))
+	case http.MethodPatch:
+		app.mux.PATCH(path, executor(path, responders))
+	case http.MethodOptions:
+		app.mux.OPTIONS(path, executor(path, responders))
+	default:
+		return &ri
+	}
+	return &ri
 }
 
-func executor(route Route) httprouter.Handle {
+func executor(path string, responders []Responder) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		rc := Context{
 			Request:   r,
@@ -64,7 +58,7 @@ func executor(route Route) httprouter.Handle {
 			bh(&rc)
 		}
 		// we come to the path responders
-		for _, responder := range route.Responders {
+		for _, responder := range responders {
 			responder(&rc)
 			if rc.written {
 				rc.AfterChan <- struct{}{}
@@ -75,7 +69,7 @@ func executor(route Route) httprouter.Handle {
 	}
 }
 
-func (app *rubik) streamPluginData() error {
+func streamPluginData() error {
 	c, err := net.Dial("unix", rubikSock)
 	if err != nil {
 		panic(err)

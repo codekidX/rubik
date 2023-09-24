@@ -24,7 +24,7 @@ type Route struct {
 // getting information about your routes
 type RouteTree struct {
 	RouterList map[string]string
-	Routes     []RouteInfo
+	Routes     []*RouteInfo
 }
 
 type appConfig struct {
@@ -34,14 +34,32 @@ type appConfig struct {
 
 // RouteInfo is a flat structure for processing information about the routes
 type RouteInfo struct {
-	FullPath    string
-	Path        string
-	Description string
-	BelongsTo   string
-	Entity      interface{}
-	IsJSON      bool
-	Method      string
-	Responses   map[int]string
+	fullPath  string
+	path      string
+	doc       string
+	groupName string
+	method    string
+	name      string
+}
+
+func (ri *RouteInfo) Name(name string) *RouteInfo {
+	ri.name = name
+	return ri
+}
+
+func (ri *RouteInfo) Doc(doc string) *RouteInfo {
+	ri.doc = doc
+	return ri
+}
+
+func (ri *RouteInfo) Group(name string) *RouteInfo {
+	ri.groupName = name
+	return ri
+}
+
+func (ri *RouteInfo) FullPath(p string) *RouteInfo {
+	ri.fullPath = p
+	return ri
 }
 
 type PluginData struct {

@@ -12,6 +12,7 @@ type Context struct {
 	Request   *http.Request
 	AfterChan chan struct{}
 
+	// TODO: need a way to expose response headers
 	writer   http.ResponseWriter
 	mu       *sync.RWMutex
 	extras   map[string]any

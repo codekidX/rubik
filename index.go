@@ -15,16 +15,36 @@ var app = &rubik{
 	beforeHooks: []Responder{},
 	routeTree: RouteTree{
 		RouterList: make(map[string]string),
-		Routes:     []RouteInfo{},
+		Routes:     []*RouteInfo{},
 	},
 }
 
-func Use(routes ...Route) {
-	app.routes = append(app.routes, routes...)
+func Hook(responder Responder) {
+	app.beforeHooks = append(app.beforeHooks, responder)
 }
 
-func BeforeHook(responder Responder) {
-	app.beforeHooks = append(app.beforeHooks, responder)
+func GET(path string, responders ...Responder) *RouteInfo {
+	return load(path, http.MethodGet, responders)
+}
+
+func POST(path string, responders ...Responder) *RouteInfo {
+	return load(path, http.MethodGet, responders)
+}
+
+func PUT(path string, responders ...Responder) *RouteInfo {
+	return load(path, http.MethodPut, responders)
+}
+
+func DELETE(path string, responders ...Responder) *RouteInfo {
+	return load(path, http.MethodDelete, responders)
+}
+
+func PATCH(path string, responders ...Responder) *RouteInfo {
+	return load(path, http.MethodPatch, responders)
+}
+
+func OPTIONS(path string, responders ...Responder) *RouteInfo {
+	return load(path, http.MethodOptions, responders)
 }
 
 func Run() error {
@@ -34,18 +54,13 @@ func Run() error {
 	}
 	app.config = c
 
-	err = app.boot()
-	if err != nil {
-		return err
-	}
-
 	// === Plugin code begins here ===
 	var plugin string
 	flag.StringVar(&plugin, "plugin", "", "output backend information to rubik plugin")
 	flag.Parse()
 	if plugin != "" {
 		fmt.Println("Running plugin:", plugin)
-		err := app.streamPluginData()
+		err := streamPluginData()
 		if err != nil {
 			return err
 		}

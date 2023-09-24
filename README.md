@@ -13,17 +13,9 @@ func tellHello(rc *rubik.Context) {
 }
 
 // GET
-index := rubik.Route{
-    Path: "/",
-    Responders: []rubik.Responder {tellHello}
-}
+rubik.GET("/", tellHello)
 // POST
-poster := rubik.Route{
-    Path: "/poster",
-    Method: []string{http.MethodPost},
-    Responders: []rubik.Responder {tellHello}
-}
-rubik.Use(index, poster)
+rubik.POST("/poster", tellHello)
 ```
 
 ### License

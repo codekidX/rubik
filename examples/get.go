@@ -14,33 +14,26 @@ func timerHook(rc *rubik.Context) {
 		<-rc.AfterChan
 		var d int64
 		var metric string
-		if time.Now().Sub(start).Milliseconds() <= 0 {
-			d = time.Now().Sub(start).Microseconds()
+		if time.Since(start).Milliseconds() <= 0 {
+			d = time.Since(start).Microseconds()
 			metric = "ns"
 		} else {
-			d = time.Now().Sub(start).Milliseconds()
+			d = time.Since(start).Milliseconds()
 			metric = "ms"
 		}
 		fmt.Printf("Hook: %d%s | %s\n", d, metric, rc.Request.URL)
 	}()
 }
 
+func testfunc(c *rubik.Context) {
+	c.JSON(http.StatusOK, rubik.RouteTree{})
+}
 func main() {
-	rubik.Use(rubik.Route{
-		Path:   "/",
-		Method: []string{http.MethodGet},
-		Responders: []rubik.Responder{
-			func(c *rubik.Context) {
-				c.JSON(http.StatusOK, rubik.RouteTree{})
-			},
-		},
-		Doc: `
-		index path of the app
+	rubik.GET("/", timerHook, testfunc).
+		Doc(`root api for the app`).
+		Name("index route")
 
-		@query epp required string
-		`,
-	})
-	rubik.BeforeHook(timerHook)
+	// rubik.Hook(timerHook)
 	err := rubik.Run()
 	if err != nil {
 		panic(err)
