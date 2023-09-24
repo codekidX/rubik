@@ -1,7 +1,12 @@
 package rubik
 
 import (
+	"bytes"
+	"encoding/gob"
+	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/julienschmidt/httprouter"
@@ -14,6 +19,14 @@ func (app *rubik) loadConfig() (*appConfig, error) {
 func (app *rubik) boot() error {
 	for _, route := range app.routes {
 		for _, m := range route.Method {
+			// FIXME: we can save some time here if we ignore join here and
+			// concat inside this loop itself
+			app.routeTree.RouterList[route.Path] = strings.Join(route.Method, "|")
+			app.routeTree.Routes = append(app.routeTree.Routes, RouteInfo{
+				Path:        route.Path,
+				Description: route.Doc,
+				Method:      m,
+			})
 			switch m {
 			case http.MethodGet:
 				app.mux.GET(route.Path, executor(route))
@@ -60,4 +73,23 @@ func executor(route Route) httprouter.Handle {
 			}
 		}
 	}
+}
+
+func (app *rubik) streamPluginData() error {
+	c, err := net.Dial("unix", rubikSock)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	fmt.Println(app.routeTree)
+	err = enc.Encode(PluginData{RouteTree: app.routeTree})
+	if err != nil {
+		return err
+	}
+
+	c.Write(buf.Bytes())
+	return nil
 }

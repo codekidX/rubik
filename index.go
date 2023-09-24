@@ -1,6 +1,8 @@
 package rubik
 
 import (
+	"flag"
+	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -11,6 +13,10 @@ var app = &rubik{
 	routes: []Route{},
 
 	beforeHooks: []Responder{},
+	routeTree: RouteTree{
+		RouterList: make(map[string]string),
+		Routes:     []RouteInfo{},
+	},
 }
 
 func Use(routes ...Route) {
@@ -31,6 +37,19 @@ func Run() error {
 	err = app.boot()
 	if err != nil {
 		return err
+	}
+
+	// === Plugin code begins here ===
+	var plugin string
+	flag.StringVar(&plugin, "plugin", "", "output backend information to rubik plugin")
+	flag.Parse()
+	if plugin != "" {
+		fmt.Println("Running plugin:", plugin)
+		err := app.streamPluginData()
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	return http.ListenAndServe(":80", &app.mux)

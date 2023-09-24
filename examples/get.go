@@ -8,7 +8,7 @@ import (
 	"github.com/rubikorg/rubik"
 )
 
-func timer(rc *rubik.Context) {
+func timerHook(rc *rubik.Context) {
 	start := time.Now()
 	go func() {
 		<-rc.AfterChan
@@ -21,7 +21,7 @@ func timer(rc *rubik.Context) {
 			d = time.Now().Sub(start).Milliseconds()
 			metric = "ms"
 		}
-		fmt.Printf("%d%s | %s\n", d, metric, rc.Request.URL)
+		fmt.Printf("Hook: %d%s | %s\n", d, metric, rc.Request.URL)
 	}()
 }
 
@@ -30,9 +30,20 @@ func main() {
 		Path:   "/",
 		Method: []string{http.MethodGet},
 		Responders: []rubik.Responder{
-			timer,
-			func(c *rubik.Context) { c.JSON(http.StatusOK, rubik.RouteTree{}) },
+			func(c *rubik.Context) {
+				c.JSON(http.StatusOK, rubik.RouteTree{})
+			},
 		},
+		Doc: `
+		index path of the app
+
+		@query epp required string
+		`,
 	})
-	rubik.Run()
+	rubik.BeforeHook(timerHook)
+	err := rubik.Run()
+	if err != nil {
+		panic(err)
+	}
+
 }
