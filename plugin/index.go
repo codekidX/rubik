@@ -28,6 +28,9 @@ func GetPluginData() (*rubik.PluginData, error) {
 			var bytebuf bytes.Buffer
 			buf := make([]byte, 4096)
 			_, err := fd.Read(buf)
+			if err != nil {
+				return nil, err
+			}
 			_, err = bytebuf.Write(buf)
 			if err != nil {
 				return nil, err
@@ -43,5 +46,4 @@ func GetPluginData() (*rubik.PluginData, error) {
 			return &pd, nil
 		}
 	}
-
 }

@@ -2,23 +2,24 @@ package rubik
 
 import (
 	"encoding/json"
-	"net/http"
-	"os"
+	"fmt"
 	"sync"
 	"time"
+
+	"github.com/valyala/fasthttp"
 )
 
 type Context struct {
-	Request   *http.Request
+	fasthttp  *fasthttp.RequestCtx
 	AfterChan chan struct{}
 
-	// TODO: need a way to expose response headers
-	writer   http.ResponseWriter
-	mu       *sync.RWMutex
-	extras   map[string]any
-	written  bool
-	err      error
-	deadline time.Time
+	mu      *sync.RWMutex
+	extras  map[string]any
+	written bool
+
+	// TODO: use these
+	// err      error
+	// deadline time.Time
 }
 
 // Deadline returns the time when work done on behalf of this context
@@ -133,25 +134,34 @@ func (c *Context) Add(key string, value any) {
 }
 
 func (c *Context) JSON(code int, data any) {
-	c.writer.WriteHeader(code)
 	b, _ := json.Marshal(data)
-	c.writer.Write(b)
+	c.fasthttp.Response.Header.SetContentType(MIMEApplicationJSON)
+	c.fasthttp.SetStatusCode(code)
+	c.fasthttp.Response.SetBodyRaw(b)
 	c.written = true
 }
 
 func (c *Context) Text(code int, data string) {
-	c.writer.WriteHeader(code)
-	c.writer.Write([]byte(data))
+	c.fasthttp.SetStatusCode(code)
+	c.fasthttp.Response.SetBodyString(data)
 	c.written = true
 }
 
-func (c *Context) TryFile(code int, filePath string) error {
-	c.writer.WriteHeader(code)
-	b, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
+// func (c *Context) TryFile(code int, filePath string) error {
+// 	c.fasthttp.SetStatusCode(code)
+
+// 	b, err := os.ReadFile(filePath)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	c.fasthttp.Response.se
+// 	c.written = true
+// 	return nil
+// }
+
+func (c *Context) GetConfig(key string) (any, error) {
+	if conf, ok := (*app.config)[key]; ok {
+		return conf, nil
 	}
-	c.writer.Write(b)
-	c.written = true
-	return nil
+	return nil, fmt.Errorf("key: %s is not present in app config", key)
 }

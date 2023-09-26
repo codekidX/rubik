@@ -5,13 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/valyala/fasthttp"
 )
 
 var app = &rubik{
-	mux:    *httprouter.New(),
-	routes: []Route{},
-
 	beforeHooks: []Responder{},
 	routeTree: RouteTree{
 		RouterList: make(map[string]string),
@@ -48,11 +45,11 @@ func OPTIONS(path string, responders ...Responder) *RouteInfo {
 }
 
 func Run() error {
-	c, err := app.loadConfig()
-	if err != nil {
-		return err
-	}
-	app.config = c
+	// c, err := app.loadConfig()
+	// if err != nil {
+	// 	return err
+	// }
+	// app.config = c
 
 	// === Plugin code begins here ===
 	var plugin string
@@ -67,5 +64,7 @@ func Run() error {
 		return nil
 	}
 
-	return http.ListenAndServe(":80", &app.mux)
+	return fasthttp.ListenAndServe(":80", func(ctx *fasthttp.RequestCtx) {
+		executor(ctx, app.routes[string(ctx.Method())][string(ctx.Path())])
+	})
 }

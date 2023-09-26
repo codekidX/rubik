@@ -1,17 +1,18 @@
 package rubik
 
-import "github.com/julienschmidt/httprouter"
-
 type rubik struct {
-	mux         httprouter.Router
-	routes      []Route
-	config      *appConfig
+	routes      ResponderMap
+	config      *AppConfig
 	beforeHooks []Responder
 
 	routeTree RouteTree
 }
 
+type ResponderMap map[string]map[string][]Responder
+
 type Responder func(c *Context)
+
+type AppConfig map[string]any
 
 type Route struct {
 	Path       string
@@ -25,11 +26,6 @@ type Route struct {
 type RouteTree struct {
 	RouterList map[string]string
 	Routes     []*RouteInfo
-}
-
-type appConfig struct {
-	Cmd  string
-	Port int
 }
 
 // RouteInfo is a flat structure for processing information about the routes
@@ -63,5 +59,6 @@ func (ri *RouteInfo) FullPath(p string) *RouteInfo {
 }
 
 type PluginData struct {
-	RouteTree RouteTree
+	WorkspaceConfig AppConfig
+	RouteTree       RouteTree
 }
